@@ -35,12 +35,11 @@ FastAPI /api/chat (:8000)
 ### VRAM 예산
 
 ```
-0.8B Q8          ≈  1.0 GB
-9B   Q4_K_M (VL) ≈  5.7 GB
-mmproj-F16       ≈  0.9 GB
+0.8B Q8_K_XL     ≈  1.2 GB
+9B   Q8_0        ≈  9.3 GB
 KV cache         ≈  1-2 GB
 ────────────────────────
-합계             ≈  8.6-9.6 GB (여유 약 6-7GB)
+합계             ≈ 11.5-12.5 GB (여유 약 3-4GB)
 ```
 
 ## 프로젝트 구조
@@ -85,11 +84,11 @@ PATH에 추가하거나, 환경 변수 `LLAMA_BIN`에 전체 경로를 설정한
 
 | 파일 | 크기 | 배치 경로 |
 |------|------|-----------|
-| `Qwen3.5-9B-Q4_K_M.gguf` | 5.68 GB | `server\models\qwen3.5-vl-9b.gguf` |
-| `mmproj-F16.gguf` | 918 MB | (비전 사용 시에만) |
-| 라우터 0.8B GGUF | ~0.5-1 GB | `server\models\router-0.8b.gguf` |
+| `Qwen3.5-9B-Q8_0.gguf` | 9.3 GB | `server\models\` |
+| `Qwen3.5-0.8B-UD-Q8_K_XL.gguf` | 1.16 GB | `server\models\` |
+| `mmproj-F16.gguf` | 200 MB | `server\models\` (비전 사용 시) |
 
-파일명이 다르면 환경 변수 `ROUTER_MODEL_FILE`, `EXECUTOR_MODEL_FILE`로 지정.
+파일명이 변경되면 환경 변수 `ROUTER_MODEL_FILE`, `EXECUTOR_MODEL_FILE`로 지정.
 
 ### 3단계: 초기 설치
 
@@ -137,8 +136,8 @@ python client.py http://192.168.1.100:8000
 |------|--------|------|
 | `LLAMA_BIN` | `llama-server` | llama-server 바이너리 경로 |
 | `MODELS_DIR` | `models` | 모델 파일 디렉터리 |
-| `ROUTER_MODEL_FILE` | `router-0.8b.gguf` | 라우터 모델 파일명 |
-| `EXECUTOR_MODEL_FILE` | `qwen3.5-vl-9b.gguf` | 실행기 모델 파일명 |
+| `ROUTER_MODEL_FILE` | `Qwen3.5-0.8B-UD-Q8_K_XL.gguf` | 라우터 모델 파일명 |
+| `EXECUTOR_MODEL_FILE` | `Qwen3.5-9B-Q8_0.gguf` | 실행기 모델 파일명 |
 | `API_PORT` | `8000` | FastAPI 포트 |
 | `ROUTER_CTX_SIZE` | `2048` | 0.8B 컨텍스트 길이 |
 | `EXECUTOR_CTX_SIZE` | `8192` | 9B 컨텍스트 길이 |

@@ -14,8 +14,8 @@ if not exist "server\.venv\Scripts\activate.bat" (
 
 :: ── 모델 파일 확인 ──
 set MODELS_DIR=server\models
-set ROUTER_FILE=%MODELS_DIR%\router-0.8b.gguf
-set EXECUTOR_FILE=%MODELS_DIR%\qwen3.5-vl-9b.gguf
+set ROUTER_FILE=%MODELS_DIR%\Qwen3.5-0.8B-UD-Q8_K_XL.gguf
+set EXECUTOR_FILE=%MODELS_DIR%\Qwen3.5-9B-Q8_0.gguf
 
 if not exist "%ROUTER_FILE%" (
     echo [경고] 라우터 모델 없음: %ROUTER_FILE%

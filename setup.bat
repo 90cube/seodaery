@@ -55,8 +55,8 @@ echo ═════════════════════════
 echo  설치 완료! 다음 단계:
 echo.
 echo  1. 모델 파일 배치:
-echo     server\models\router-0.8b.gguf
-echo     server\models\qwen3.5-vl-9b.gguf
+echo     server\models\Qwen3.5-0.8B-UD-Q8_K_XL.gguf
+echo     server\models\Qwen3.5-9B-Q8_0.gguf
 echo.
 echo  2. llama-server.exe 경로 확인 (PATH 또는 LLAMA_BIN 환경변수)
 echo.
