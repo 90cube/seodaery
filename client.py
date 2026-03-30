@@ -90,9 +90,9 @@ def main() -> None:
 
                 result = wait_for_result(server, request_id)
                 model = result.get("model_used", "?")
-                intent = result.get("intent", "?")
+                input_type = result.get("input_type", "?")
                 content = result.get("content", "(응답 없음)")
-                print(f"  [{model}|{intent}] {content}\n")
+                print(f"  [{model}|{input_type}] {content}\n")
 
             except urllib.error.URLError as e:
                 print(f"  [오류] 서버 통신 실패: {e}\n")

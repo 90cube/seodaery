@@ -29,38 +29,29 @@ EXECUTOR_MODEL_FILE = os.getenv("EXECUTOR_MODEL_FILE", "Qwen3.5-9B-Q8_0.gguf")
 # --- llama-server 바이너리 ---
 LLAMA_BIN = os.getenv("LLAMA_BIN", "llama-server")
 
-# --- 라우터 설정 ---
+# --- 타임아웃 ---
 ROUTER_TIMEOUT_SEC = float(os.getenv("ROUTER_TIMEOUT_SEC", "30.0"))
 EXECUTOR_TIMEOUT_SEC = float(os.getenv("EXECUTOR_TIMEOUT_SEC", "120.0"))
-ROUTER_MAX_TOKENS = 20
+ROUTER_MAX_TOKENS = 10
 EXECUTOR_MAX_TOKENS = 2048
 
-# --- 의도 분류 ---
-INTENT_SIMPLE = "simple"
-INTENT_COMPLEX = "complex"
+# --- 입력 타입 분류 ---
+INPUT_TYPE_TEXT = "text"
+INPUT_TYPE_IMAGE = "image"
+INPUT_TYPE_WORKER = "worker"
 
-INTENT_CLASSIFICATION_PROMPT = (
-    "You are an intent classifier. "
-    "Analyze the user message step by step, then classify it.\n\n"
-    "Step 1: Identify what the user is asking.\n"
-    "Step 2: Determine complexity.\n"
-    "Step 3: Output ONLY the final label.\n\n"
-    "simple: greetings, casual chat, yes/no, factual lookups, short answers.\n"
-    "complex: reasoning, coding, multi-step tasks, creative writing, analysis, "
-    "explanations, anything requiring detailed thought.\n\n"
-    "Output ONLY one word: simple or complex"
+INPUT_TYPE_CLASSIFICATION_PROMPT = (
+    "Classify the input type. Reply with ONLY one word.\n\n"
+    "text: plain text message, question, conversation\n"
+    "image: contains image, photo, picture, or visual content\n"
+    "worker: automated task, scheduled job, system command\n\n"
+    "Output ONLY one word: text or image or worker"
 )
 
-SIMPLE_SYSTEM_PROMPT = (
+# --- 9B 실행기 시스템 프롬프트 ---
+EXECUTOR_SYSTEM_PROMPT = (
     "You are a helpful Korean-speaking assistant. "
-    "Think step by step before answering. "
-    "Always provide a clear, complete response in Korean. "
-    "Never leave your answer empty."
-)
-
-COMPLEX_SYSTEM_PROMPT = (
-    "You are a helpful Korean-speaking assistant. "
-    "You MUST think step by step using Chain of Thought reasoning.\n\n"
+    "You MUST use Zero-shot Chain of Thought reasoning.\n\n"
     "For every question:\n"
     "Step 1: Restate the core question in your own words.\n"
     "Step 2: Break it into sub-problems or key points.\n"

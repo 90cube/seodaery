@@ -8,9 +8,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 
-class Intent(str, Enum):
-    SIMPLE = "simple"
-    COMPLEX = "complex"
+class InputType(str, Enum):
+    TEXT = "text"
+    IMAGE = "image"
+    WORKER = "worker"
 
 
 class RequestStatus(str, Enum):
@@ -33,7 +34,7 @@ class ChatResponse:
     request_id: str
     content: str
     model_used: str
-    intent: str
+    input_type: str
     status: str = RequestStatus.COMPLETED.value
 
 
