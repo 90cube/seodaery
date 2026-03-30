@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
@@ -11,16 +13,23 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server.api.chat import router as chat_router
 from server.api.websocket import router as ws_router
-from server.config.constants import API_HOST, API_PORT
+from server.config.constants import (
+    API_HOST,
+    API_PORT,
+    EXECUTOR_MODEL_FILE,
+    LLAMA_BIN,
+    MODELS_DIR,
+    ROUTER_MODEL_FILE,
+)
 from server.domain.queue_processor import run_worker, stop_worker
-from server.system.redis_client import close as close_redis
+from server.system.process_manager import start_all, stop_all
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-app = FastAPI(title="Dual-Model LLM Server", version="0.1.0")
+app = FastAPI(title="Dual-Model LLM Server", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,6 +47,17 @@ _worker_task: asyncio.Task | None = None
 @app.on_event("startup")
 async def startup():
     global _worker_task
+
+    models_dir = Path(MODELS_DIR)
+    router_path = str(models_dir / ROUTER_MODEL_FILE)
+    executor_path = str(models_dir / EXECUTOR_MODEL_FILE)
+
+    start_all(
+        router_model=router_path,
+        executor_model=executor_path,
+        llama_bin=LLAMA_BIN,
+    )
+
     _worker_task = asyncio.create_task(run_worker())
 
 
@@ -46,7 +66,7 @@ async def shutdown():
     stop_worker()
     if _worker_task:
         _worker_task.cancel()
-    await close_redis()
+    stop_all()
 
 
 if __name__ == "__main__":

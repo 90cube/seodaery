@@ -3,35 +3,28 @@
 from __future__ import annotations
 
 import asyncio
-import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from server.config.constants import QUEUE_STATUS_CHANNEL
-from server.system.redis_client import get_redis
+from server.system.queue_store import subscribe, unsubscribe
 
 router = APIRouter(tags=["websocket"])
 
 
 @router.websocket("/ws/queue")
 async def queue_websocket(ws: WebSocket):
-    """Redis Pub/Sub를 구독하여 큐 상태 변경을 클라이언트에 푸시한다."""
+    """인메모리 Pub/Sub를 구독하여 큐 상태 변경을 클라이언트에 푸시한다."""
     await ws.accept()
-
-    r = await get_redis()
-    pubsub = r.pubsub()
-    await pubsub.subscribe(QUEUE_STATUS_CHANNEL)
+    sub = subscribe()
 
     try:
         while True:
-            msg = await pubsub.get_message(
-                ignore_subscribe_messages=True, timeout=1.0
-            )
-            if msg and msg["type"] == "message":
-                await ws.send_text(msg["data"])
-            await asyncio.sleep(0.1)
+            try:
+                msg = await asyncio.wait_for(sub.get(), timeout=30.0)
+                await ws.send_text(msg)
+            except asyncio.TimeoutError:
+                await ws.send_text('{"ping": true}')
     except WebSocketDisconnect:
         pass
     finally:
-        await pubsub.unsubscribe(QUEUE_STATUS_CHANNEL)
-        await pubsub.aclose()
+        unsubscribe(sub)

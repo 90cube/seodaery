@@ -8,7 +8,7 @@ from dataclasses import asdict
 from fastapi import APIRouter
 
 from server.model.schemas import ChatRequest, RequestStatus
-from server.system.redis_client import enqueue_request, get_queue_length, get_result
+from server.system.queue_store import enqueue_request, get_queue_length, get_result
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -33,9 +33,9 @@ async def chat(body: dict):
 @router.get("/chat/{request_id}")
 async def get_chat_result(request_id: str):
     """처리 결과를 폴링한다."""
-    result = await get_result(request_id)
+    result = get_result(request_id)
     if result is None:
-        queue_len = await get_queue_length()
+        queue_len = get_queue_length()
         return {
             "request_id": request_id,
             "status": RequestStatus.PROCESSING.value,
@@ -47,5 +47,5 @@ async def get_chat_result(request_id: str):
 @router.get("/queue/status")
 async def queue_status():
     """현재 대기열 상태를 반환한다."""
-    length = await get_queue_length()
+    length = get_queue_length()
     return {"pending_count": length}

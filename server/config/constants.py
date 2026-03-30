@@ -17,17 +17,17 @@ EXECUTOR_GPU_LAYERS = int(os.getenv("EXECUTOR_GPU_LAYERS", "99"))
 ROUTER_CTX_SIZE = int(os.getenv("ROUTER_CTX_SIZE", "2048"))
 EXECUTOR_CTX_SIZE = int(os.getenv("EXECUTOR_CTX_SIZE", "4096"))
 
-# --- Redis ---
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_DB = int(os.getenv("REDIS_DB", "0"))
-QUEUE_KEY = "chat:request_queue"
-RESULT_KEY_PREFIX = "chat:result:"
-QUEUE_STATUS_CHANNEL = "chat:queue_status"
-
 # --- FastAPI ---
-API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_HOST = os.getenv("API_HOST", "127.0.0.1")
 API_PORT = int(os.getenv("API_PORT", "8000"))
+
+# --- 모델 파일 경로 ---
+MODELS_DIR = os.getenv("MODELS_DIR", "models")
+ROUTER_MODEL_FILE = os.getenv("ROUTER_MODEL_FILE", "router-0.8b.gguf")
+EXECUTOR_MODEL_FILE = os.getenv("EXECUTOR_MODEL_FILE", "executor-14b.gguf")
+
+# --- llama-server 바이너리 ---
+LLAMA_BIN = os.getenv("LLAMA_BIN", "llama-server")
 
 # --- 라우터 설정 ---
 ROUTER_TIMEOUT_SEC = 2.0

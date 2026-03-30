@@ -1,14 +1,13 @@
-"""큐 워커. Redis에서 요청을 꺼내 라우터 → 실행기 흐름을 처리한다."""
+"""큐 워커. 인메모리 큐에서 요청을 꺼내 라우터 → 실행기 흐름을 처리한다."""
 
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 
 from server.domain.intent_router import classify_intent, handle_complex, handle_simple
 from server.model.schemas import Intent, RequestStatus
-from server.system.redis_client import dequeue_request, store_result
+from server.system.queue_store import dequeue_request, store_result
 
 logger = logging.getLogger(__name__)
 
