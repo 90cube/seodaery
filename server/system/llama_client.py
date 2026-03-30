@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from server.config.constants import LLAMA_COMPLETION_PATH
+
+_THINK_PATTERN = re.compile(r"<think>.*?</think>", re.DOTALL)
+
+
+def _strip_think_tags(text: str) -> str:
+    """Qwen3.5의 <think>...</think> 태그를 제거하고 실제 응답만 반환한다."""
+    cleaned = _THINK_PATTERN.sub("", text).strip()
+    return cleaned if cleaned else text.strip()
 
 
 async def request_completion(
@@ -28,7 +38,8 @@ async def request_completion(
         resp.raise_for_status()
 
     data = resp.json()
-    return data["choices"][0]["message"]["content"].strip()
+    raw = data["choices"][0]["message"]["content"]
+    return _strip_think_tags(raw)
 
 
 async def health_check(base_url: str) -> bool:
