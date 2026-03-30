@@ -1,4 +1,4 @@
-"""0.8B 라우터 의도 분류. 순수 도메인 로직 — 외부 프레임워크 의존 금지."""
+"""0.8B 라우터 의도 분류 + 9B 응답 생성. 순수 도메인 로직."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from server.config.constants import (
     INTENT_COMPLEX,
     INTENT_SIMPLE,
     ROUTER_MAX_TOKENS,
-    ROUTER_MODEL_NAME,
     ROUTER_MODEL_URL,
     ROUTER_TIMEOUT_SEC,
     SIMPLE_SYSTEM_PROMPT,
@@ -43,30 +42,30 @@ async def classify_intent(message: str) -> Intent:
 
 
 async def handle_simple(request_id: str, message: str) -> ChatResponse:
-    """단순 요청을 0.8B 모델이 직접 처리한다."""
+    """단순 요청 — 9B 모델이 간결하게 응답한다."""
     messages = [
         {"role": "system", "content": SIMPLE_SYSTEM_PROMPT},
         {"role": "user", "content": message},
     ]
 
     content = await request_completion(
-        base_url=ROUTER_MODEL_URL,
+        base_url=EXECUTOR_MODEL_URL,
         messages=messages,
         max_tokens=512,
-        timeout=ROUTER_TIMEOUT_SEC * 5,
+        timeout=EXECUTOR_TIMEOUT_SEC,
         temperature=0.7,
     )
 
     return ChatResponse(
         request_id=request_id,
         content=content,
-        model_used=ROUTER_MODEL_NAME,
+        model_used=EXECUTOR_MODEL_NAME,
         intent=INTENT_SIMPLE,
     )
 
 
 async def handle_complex(request_id: str, message: str) -> ChatResponse:
-    """복잡한 요청을 14B 모델로 처리한다."""
+    """복잡한 요청 — 9B 모델이 단계적으로 추론한다."""
     messages = [
         {"role": "system", "content": COMPLEX_SYSTEM_PROMPT},
         {"role": "user", "content": message},
