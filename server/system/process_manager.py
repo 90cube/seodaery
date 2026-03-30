@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import subprocess
-import sys
 from pathlib import Path
+
+import httpx
 
 from server.config.constants import (
     EXECUTOR_CTX_SIZE,
@@ -20,6 +21,9 @@ from server.config.constants import (
 logger = logging.getLogger(__name__)
 
 _processes: dict[str, subprocess.Popen] = {}
+
+HEALTH_CHECK_INTERVAL = 2.0
+HEALTH_CHECK_MAX_WAIT = 180.0
 
 
 def _extract_port(url: str) -> str:
@@ -61,12 +65,39 @@ def start_model(
     return proc
 
 
-def start_all(
+async def wait_until_ready(name: str, base_url: str) -> bool:
+    """모델이 로딩 완료될 때까지 헬스체크로 대기한다."""
+    logger.info("대기 중: %s 모델 로딩 (%s) ...", name, base_url)
+    elapsed = 0.0
+
+    while elapsed < HEALTH_CHECK_MAX_WAIT:
+        proc = _processes.get(name)
+        if proc and proc.poll() is not None:
+            logger.error("%s 프로세스가 종료됨 (exit code: %d)", name, proc.returncode)
+            return False
+
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                resp = await client.get(f"{base_url}/health")
+                if resp.status_code == 200:
+                    logger.info("준비 완료: %s (%.1f초 소요)", name, elapsed)
+                    return True
+        except (httpx.RequestError, httpx.HTTPStatusError):
+            pass
+
+        await asyncio.sleep(HEALTH_CHECK_INTERVAL)
+        elapsed += HEALTH_CHECK_INTERVAL
+
+    logger.error("타임아웃: %s 모델 로딩 실패 (%.0f초 초과)", name, HEALTH_CHECK_MAX_WAIT)
+    return False
+
+
+async def start_all_and_wait(
     router_model: str,
     executor_model: str,
     llama_bin: str = "llama-server",
 ) -> None:
-    """라우터 + 실행기 두 프로세스를 모두 시작한다."""
+    """두 프로세스를 시작하고 모두 준비될 때까지 대기한다."""
     start_model(
         name="router",
         model_path=router_model,
@@ -83,6 +114,16 @@ def start_all(
         gpu_layers=EXECUTOR_GPU_LAYERS,
         llama_bin=llama_bin,
     )
+
+    router_ok, executor_ok = await asyncio.gather(
+        wait_until_ready("router", ROUTER_MODEL_URL),
+        wait_until_ready("executor", EXECUTOR_MODEL_URL),
+    )
+
+    if router_ok and executor_ok:
+        logger.info("모든 모델 준비 완료 — 요청 수신 가능")
+    else:
+        logger.warning("일부 모델 로딩 실패 — 서버는 시작되지만 오류 발생 가능")
 
 
 def stop_all() -> None:

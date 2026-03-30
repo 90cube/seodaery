@@ -22,7 +22,7 @@ from server.config.constants import (
     ROUTER_MODEL_FILE,
 )
 from server.domain.queue_processor import run_worker, stop_worker
-from server.system.process_manager import start_all, stop_all
+from server.system.process_manager import start_all_and_wait, stop_all
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,7 +52,7 @@ async def startup():
     router_path = str(models_dir / ROUTER_MODEL_FILE)
     executor_path = str(models_dir / EXECUTOR_MODEL_FILE)
 
-    start_all(
+    await start_all_and_wait(
         router_model=router_path,
         executor_model=executor_path,
         llama_bin=LLAMA_BIN,
