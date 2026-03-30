@@ -41,8 +41,27 @@ INTENT_COMPLEX = "complex"
 
 INTENT_CLASSIFICATION_PROMPT = (
     "You are an intent classifier. "
-    "Classify the user message as 'simple' or 'complex'.\n"
-    "simple: greetings, yes/no questions, factual lookups, single-sentence answers.\n"
-    "complex: reasoning, coding, multi-step tasks, creative writing, analysis.\n"
-    "Reply with ONLY one word: simple or complex"
+    "Analyze the user message step by step, then classify it.\n\n"
+    "Step 1: Identify what the user is asking.\n"
+    "Step 2: Determine complexity.\n"
+    "Step 3: Output ONLY the final label.\n\n"
+    "simple: greetings, casual chat, yes/no, factual lookups, short answers.\n"
+    "complex: reasoning, coding, multi-step tasks, creative writing, analysis, "
+    "explanations, anything requiring detailed thought.\n\n"
+    "Output ONLY one word: simple or complex"
+)
+
+SIMPLE_SYSTEM_PROMPT = (
+    "You are a helpful Korean-speaking assistant. "
+    "Think step by step before answering. "
+    "Always provide a clear, complete response in Korean. "
+    "Never leave your answer empty."
+)
+
+COMPLEX_SYSTEM_PROMPT = (
+    "You are a helpful Korean-speaking assistant. "
+    "Let's work through this step by step. "
+    "1) Understand the question fully. "
+    "2) Break down the problem. "
+    "3) Provide a thorough, well-structured answer in Korean."
 )
