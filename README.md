@@ -1,6 +1,6 @@
 # 듀얼 모델 LLM 로컬 호스팅
 
-0.8B 라우터 + 14B 실행기를 하나의 GPU(RTX 4070 Ti Super 16GB)에서 운용하는 로컬 추론 서버.
+0.8B 라우터 + 9B 멀티모달 실행기를 하나의 GPU(RTX 4070 Ti Super 16GB)에서 운용하는 로컬 추론 서버.
 Docker, Linux, WSL 불필요 — Windows 네이티브 실행.
 
 ## 아키텍처
@@ -19,7 +19,7 @@ FastAPI /api/chat (:8000)
     │
     ├─ simple → 0.8B가 직접 응답
     │
-    └─ complex → 14B 실행기 (:8082) → 응답
+    └─ complex → 9B 실행기 (:8082) → 응답
 ```
 
 ## 사전 준비
@@ -35,11 +35,11 @@ FastAPI /api/chat (:8000)
 ### VRAM 예산
 
 ```
-0.8B Q8     ≈  1.0 GB
-14B  Q4_K_M ≈  8.5 GB
-KV cache    ≈  1-2 GB
-────────────────────
-합계        ≈ 10.5-11.5 GB (여유 약 4GB)
+0.8B Q8          ≈  1.0 GB
+9B   Q4_K_M (VL) ≈  5.5-6 GB
+KV cache         ≈  1-2 GB
+────────────────────────
+합계             ≈  7.5-9 GB (여유 약 7-8GB)
 ```
 
 ## 프로젝트 구조
@@ -92,7 +92,7 @@ GGUF 포맷 모델을 `server/models/`에 배치한다.
 | 용도 | 파일명 | 추천 모델 |
 |------|--------|-----------|
 | 라우터 (0.8B) | `router-0.8b.gguf` | Qwen2.5-0.5B, SmolLM2-360M |
-| 실행기 (14B) | `executor-14b.gguf` | Qwen2.5-14B-Q4_K_M |
+| 실행기 (9B) | `qwen3.5-vl-9b.gguf` | Qwen3.5-VL-9B-Q4_K_M |
 
 파일명이 다르면 환경 변수로 지정:
 
@@ -157,17 +157,17 @@ curl http://localhost:8000/api/chat/a1b2c3d4e5f6
 | `LLAMA_BIN` | `llama-server` | llama-server 바이너리 경로 |
 | `MODELS_DIR` | `models` | 모델 파일 디렉터리 |
 | `ROUTER_MODEL_FILE` | `router-0.8b.gguf` | 라우터 모델 파일명 |
-| `EXECUTOR_MODEL_FILE` | `executor-14b.gguf` | 실행기 모델 파일명 |
+| `EXECUTOR_MODEL_FILE` | `qwen3.5-vl-9b.gguf` | 실행기 모델 파일명 |
 | `ROUTER_MODEL_URL` | `http://localhost:8081` | 0.8B 서버 주소 |
 | `EXECUTOR_MODEL_URL` | `http://localhost:8082` | 14B 서버 주소 |
 | `API_HOST` | `127.0.0.1` | FastAPI 바인드 주소 |
 | `API_PORT` | `8000` | FastAPI 포트 |
 | `ROUTER_CTX_SIZE` | `2048` | 0.8B 컨텍스트 길이 |
-| `EXECUTOR_CTX_SIZE` | `4096` | 14B 컨텍스트 길이 |
+| `EXECUTOR_CTX_SIZE` | `8192` | 9B 컨텍스트 길이 |
 
 ## 문제 해결
 
 - **llama-server 실행 안됨** → `LLAMA_BIN` 경로 확인, CUDA 드라이버 설치 확인
 - **OOM** → 환경 변수 `ROUTER_CTX_SIZE`, `EXECUTOR_CTX_SIZE` 축소
-- **모델 로딩 느림** → 첫 요청 전 30초~1분 대기 필요 (14B 모델)
-- **14B 타임아웃** → 환경 변수 `EXECUTOR_TIMEOUT_SEC` 조정
+- **모델 로딩 느림** → 첫 요청 전 20~40초 대기 필요 (9B 모델)
+- **타임아웃** → 환경 변수 `EXECUTOR_TIMEOUT_SEC` 조정
