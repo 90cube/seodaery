@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+*.db
+kv_cache/
+.seodaery_user_id
