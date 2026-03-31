@@ -76,7 +76,9 @@ def get_session(user_id: str) -> dict | None:
 
 
 def build_context(
-    user_id: str, relevant_memories: list[dict] | None = None
+    user_id: str,
+    relevant_memories: list[dict] | None = None,
+    knowledge_text: str = "",
 ) -> list[dict]:
     """9B에게 보낼 메시지 컨텍스트를 구성한다."""
     session = _sessions.get(user_id)
@@ -111,6 +113,9 @@ def build_context(
             d["content"] for d in session["skills"]
         )
         system_parts.append(f"\n활성 스킬: {skill_text}")
+
+    if knowledge_text:
+        system_parts.append(f"\n{knowledge_text}")
 
     messages = [{"role": "system", "content": "\n".join(system_parts)}]
     messages.extend(session["messages"])

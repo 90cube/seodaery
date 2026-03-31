@@ -12,6 +12,10 @@ from server.data.memory_store import (
     store_triple,
 )
 from server.domain.intent_router import generate_response
+from server.domain.knowledge_search import (
+    format_knowledge_context,
+    search_game_knowledge,
+)
 from server.domain.memory_extractor import (
     extract_memories,
     search_relevant_memories,
@@ -121,8 +125,12 @@ async def _handle_chat(
     ]
     relevant = await search_relevant_memories(message, triple_dicts)
 
+    # 지식 DB 검색
+    knowledge_results = await search_game_knowledge(message)
+    knowledge_text = format_knowledge_context(knowledge_results)
+
     # 컨텍스트 구성 → 9B 응답
-    messages = build_context(user_id, relevant)
+    messages = build_context(user_id, relevant, knowledge_text)
     content = await generate_response(messages)
 
     add_message(user_id, "assistant", content)
