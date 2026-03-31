@@ -12,7 +12,7 @@ from server.config.constants import (
 )
 from server.data.database import get_db, init_tables
 from server.data.memory_store import get_important_triples
-from server.domain.intent_router import generate_response
+from server.domain.react_loop import run_react_loop
 from server.domain.knowledge_search import (
     format_knowledge_context,
     search_game_knowledge,
@@ -141,9 +141,9 @@ async def _handle_chat(
     knowledge_results = await search_game_knowledge(message)
     knowledge_text = format_knowledge_context(knowledge_results)
 
-    # 컨텍스트 구성 → 9B 응답
+    # 컨텍스트 구성 → ReAct 루프 (도구 호출 가능)
     messages = build_context(user_id, relevant, knowledge_text)
-    content = await generate_response(messages)
+    content = await run_react_loop(messages)
 
     add_message(user_id, "assistant", content)
 
