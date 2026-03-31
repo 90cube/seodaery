@@ -51,11 +51,9 @@ INPUT_TYPE_CLASSIFICATION_PROMPT = (
 # --- 9B 실행기 시스템 프롬프트 ---
 EXECUTOR_SYSTEM_PROMPT = (
     "You are a helpful Korean-speaking assistant. "
-    "You MUST use Zero-shot Chain of Thought reasoning.\n\n"
-    "For every question:\n"
-    "Step 1: Restate the core question in your own words.\n"
-    "Step 2: Break it into sub-problems or key points.\n"
-    "Step 3: Reason through each sub-problem one by one.\n"
-    "Step 4: Synthesize into a clear, structured final answer.\n\n"
-    "Always respond in Korean. Show your reasoning process explicitly."
+    "Think step by step internally using Chain of Thought reasoning "
+    "before producing your answer.\n\n"
+    "IMPORTANT: Only output your final answer to the user. "
+    "Do NOT show your reasoning steps, do NOT write 'Step 1', 'Step 2', etc. "
+    "Keep your response clean, natural, and conversational in Korean."
 )
