@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 
 from server.config.constants import (
     MEMORY_EXTRACTION_PROMPT,
@@ -24,37 +25,62 @@ def _extract_json_fragment(raw: str, open_char: str, close_char: str) -> str | N
     return raw[start:end]
 
 
+def _fallback_parse_registration(text: str) -> dict | None:
+    """Python 레벨 폴백 파서. LLM 실패 시 기본 패턴 매칭으로 추출."""
+    # "저는 홍길동. 과장, 개발입니다" / "홍길동 과장 개발" 등
+    text = text.strip().rstrip(".")
+
+    # 패턴들: "이름. 직급, 직무" / "이름, 직급, 직무" / "이름 직급 직무"
+    # "저는/제 이름은" 접두사 제거
+    cleaned = re.sub(r"^(저는|제\s*이름은|전)\s*", "", text)
+    cleaned = re.sub(r"(입니다|이에요|이요|예요|요)\.?\s*$", "", cleaned)
+    cleaned = cleaned.strip().rstrip(".")
+
+    # 구분자로 분리: . , 공백
+    parts = re.split(r"[.,]\s*|\s+", cleaned)
+    parts = [p.strip() for p in parts if p.strip()]
+
+    if len(parts) >= 3:
+        return {"name": parts[0], "position": parts[1], "role": parts[2]}
+    if len(parts) == 2:
+        return {"name": parts[0], "position": parts[1], "role": ""}
+    if len(parts) == 1 and len(parts[0]) >= 2:
+        return {"name": parts[0], "position": "", "role": ""}
+    return None
+
+
 async def validate_registration(user_input: str) -> dict | None:
-    """유저 등록 입력을 0.8B 모델로 검증하고 구조화된 데이터를 반환한다.
+    """유저 등록 입력을 검증하고 구조화된 데이터를 반환한다.
 
-    Returns:
-        검증 성공 시 name 필드를 포함한 dict, 실패 시 None.
+    1차: Reasoner 모델로 JSON 추출
+    2차: Python 폴백 파서
     """
-    messages = [
-        {"role": "system", "content": REGISTRATION_VALIDATION_PROMPT},
-        {"role": "user", "content": user_input},
-    ]
-
-    raw = await request_completion(
-        base_url=REASONER_MODEL_URL,
-        messages=messages,
-        max_tokens=100,
-        timeout=REASONER_TIMEOUT_SEC,
-        temperature=0.0,
-    )
-
-    fragment = _extract_json_fragment(raw, "{", "}")
-    if fragment is None:
-        return None
-
+    # 1차: LLM 시도
     try:
-        data = json.loads(fragment)
-        if data.get("name"):
-            return data
-        return None
-    except (json.JSONDecodeError, KeyError):
-        logger.warning("등록 정보 파싱 실패: %s", raw)
-        return None
+        messages = [
+            {"role": "system", "content": REGISTRATION_VALIDATION_PROMPT},
+            {"role": "user", "content": user_input},
+        ]
+        raw = await request_completion(
+            base_url=REASONER_MODEL_URL,
+            messages=messages,
+            max_tokens=100,
+            timeout=REASONER_TIMEOUT_SEC,
+            temperature=0.0,
+        )
+        fragment = _extract_json_fragment(raw, "{", "}")
+        if fragment:
+            data = json.loads(fragment)
+            if data.get("name"):
+                return data
+    except Exception as exc:
+        logger.warning("LLM 등록 검증 실패: %s", exc)
+
+    # 2차: Python 폴백
+    fallback = _fallback_parse_registration(user_input)
+    if fallback:
+        logger.info("폴백 파서로 등록 정보 추출: %s", fallback)
+    return fallback
 
 
 async def extract_memories(conversation_text: str) -> list[dict]:
