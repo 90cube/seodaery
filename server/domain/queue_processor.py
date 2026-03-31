@@ -5,22 +5,19 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from server.config.constants import EXECUTOR_MODEL_NAME, REGISTRATION_PROMPT
-from server.data.database import get_db, init_tables
-from server.data.memory_store import (
-    get_important_triples,
-    store_triple,
+from server.config.constants import (
+    EXECUTOR_MODEL_NAME,
+    QUEUE_TIMEOUT_SEC,
+    REGISTRATION_PROMPT,
 )
+from server.data.database import get_db, init_tables
+from server.data.memory_store import get_important_triples
 from server.domain.intent_router import generate_response
 from server.domain.knowledge_search import (
     format_knowledge_context,
     search_game_knowledge,
 )
-from server.domain.memory_extractor import (
-    extract_memories,
-    search_relevant_memories,
-    validate_registration,
-)
+from server.domain.memory_extractor import search_relevant_memories, validate_registration
 from server.domain.session_manager import (
     add_message,
     build_context,
@@ -32,7 +29,7 @@ from server.domain.session_manager import (
     start_session,
 )
 from server.model.schemas import RequestStatus
-from server.system.queue_store import dequeue_request, store_result
+from server.system.queue_store import dequeue_request, mark_dedup_done, store_result
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +37,24 @@ _running = False
 
 
 async def process_one(item: dict) -> None:
-    """단일 요청을 처리한다."""
+    """단일 요청을 처리한다. 60초 타임아웃 적용."""
     request_id = item["request_id"]
     message = item["message"]
     user_id = item.get("user_id", "anonymous")
+    dedup_key = item.get("dedup_key", "")
 
     try:
-        # 최초 접속 체크
-        if is_new_user(user_id):
-            result = await _handle_new_user(request_id, user_id, message)
-        else:
-            result = await _handle_chat(request_id, user_id, message)
+        coro = _dispatch(request_id, user_id, message)
+        result = await asyncio.wait_for(coro, timeout=QUEUE_TIMEOUT_SEC)
+    except asyncio.TimeoutError:
+        logger.warning("타임아웃: %s (%.0f초 초과)", request_id, QUEUE_TIMEOUT_SEC)
+        result = {
+            "request_id": request_id,
+            "content": f"처리 시간이 {int(QUEUE_TIMEOUT_SEC)}초를 초과하여 중단되었습니다.",
+            "model_used": "none",
+            "input_type": "timeout",
+            "status": RequestStatus.ERROR.value,
+        }
     except Exception as exc:
         logger.exception("요청 처리 실패: %s", request_id)
         result = {
@@ -61,7 +65,15 @@ async def process_one(item: dict) -> None:
             "status": RequestStatus.ERROR.value,
         }
 
+    result["_dedup_key"] = dedup_key
     await store_result(request_id, result)
+
+
+async def _dispatch(request_id: str, user_id: str, message: str) -> dict:
+    """최초 접속/일반 대화를 분기한다."""
+    if is_new_user(user_id):
+        return await _handle_new_user(request_id, user_id, message)
+    return await _handle_chat(request_id, user_id, message)
 
 
 async def _handle_new_user(
@@ -142,27 +154,6 @@ async def _handle_chat(
         "input_type": "text",
         "status": RequestStatus.COMPLETED.value,
     }
-
-
-async def save_session_memories(user_id: str) -> int:
-    """세션 종료 시 대화에서 기억을 추출하여 저장한다."""
-    conversation = get_conversation_text(user_id)
-    if not conversation:
-        return 0
-
-    triples = await extract_memories(conversation)
-    if not triples:
-        return 0
-
-    conn = get_db(user_id)
-    init_tables(conn)
-    for t in triples:
-        store_triple(conn, t["subject"], t["predicate"], t["object"])
-    conn.close()
-
-    end_session(user_id)
-    logger.info("기억 저장 완료: %s (%d건)", user_id, len(triples))
-    return len(triples)
 
 
 async def run_worker() -> None:

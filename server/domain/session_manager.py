@@ -12,7 +12,7 @@ from server.data.user_store import (
     get_user,
     update_last_seen,
 )
-from server.data.memory_store import search_triples, get_important_triples
+from server.data.memory_store import get_important_triples, search_triples, store_triple
 from server.data.directive_store import get_directives, get_active_skills
 from server.config.constants import PERSONA_SYSTEM_PROMPT, REGISTRATION_PROMPT
 
@@ -140,3 +140,25 @@ def end_session(user_id: str) -> list[dict]:
     if session:
         return session["messages"]
     return []
+
+
+async def save_session_memories(user_id: str) -> int:
+    """세션 종료 시 대화에서 기억을 추출하여 저장한다."""
+    from server.domain.memory_extractor import extract_memories
+
+    conversation = get_conversation_text(user_id)
+    if not conversation:
+        return 0
+
+    triples = await extract_memories(conversation)
+    if not triples:
+        return 0
+
+    conn = get_db(user_id)
+    init_tables(conn)
+    for t in triples:
+        store_triple(conn, t["subject"], t["predicate"], t["object"])
+    conn.close()
+
+    end_session(user_id)
+    return len(triples)

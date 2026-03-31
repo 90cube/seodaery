@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Header
 
-from server.domain.queue_processor import save_session_memories
+from server.domain.session_manager import save_session_memories
 from server.model.schemas import ChatRequest, RequestStatus
 from server.system.queue_store import enqueue_request, get_queue_length, get_result
 
@@ -22,6 +22,9 @@ async def chat(body: dict, x_user_id: str = Header(default="anonymous")):
     queue_len = await enqueue_request(
         req.request_id, req.message, user_id=x_user_id
     )
+
+    if queue_len is None:
+        return {"error": "동일한 요청이 이미 처리 중입니다.", "duplicate": True}
 
     return {
         "request_id": req.request_id,

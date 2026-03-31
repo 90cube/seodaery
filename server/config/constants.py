@@ -29,6 +29,9 @@ EXECUTOR_MODEL_FILE = os.getenv("EXECUTOR_MODEL_FILE", "Qwen3.5-9B-Q8_0.gguf")
 # --- llama-server 바이너리 ---
 LLAMA_BIN = os.getenv("LLAMA_BIN", "llama-server")
 
+# --- 대기열 정책 ---
+QUEUE_TIMEOUT_SEC = float(os.getenv("QUEUE_TIMEOUT_SEC", "60.0"))
+
 # --- 타임아웃 ---
 ROUTER_TIMEOUT_SEC = float(os.getenv("ROUTER_TIMEOUT_SEC", "30.0"))
 EXECUTOR_TIMEOUT_SEC = float(os.getenv("EXECUTOR_TIMEOUT_SEC", "120.0"))
