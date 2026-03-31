@@ -20,10 +20,10 @@ def _get_queue() -> asyncio.Queue:
     return _request_queue
 
 
-async def enqueue_request(request_id: str, message: str) -> int:
+async def enqueue_request(request_id: str, message: str, user_id: str = "anonymous") -> int:
     """요청을 큐에 추가하고 현재 대기열 길이를 반환한다."""
     q = _get_queue()
-    await q.put({"request_id": request_id, "message": message})
+    await q.put({"request_id": request_id, "message": message, "user_id": user_id})
     length = q.qsize()
     await _broadcast({"request_id": request_id, "pending_count": length})
     return length

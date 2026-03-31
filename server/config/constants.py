@@ -35,25 +35,60 @@ EXECUTOR_TIMEOUT_SEC = float(os.getenv("EXECUTOR_TIMEOUT_SEC", "120.0"))
 ROUTER_MAX_TOKENS = 10
 EXECUTOR_MAX_TOKENS = 2048
 
-# --- 입력 타입 분류 ---
-INPUT_TYPE_TEXT = "text"
-INPUT_TYPE_IMAGE = "image"
-INPUT_TYPE_WORKER = "worker"
-
-INPUT_TYPE_CLASSIFICATION_PROMPT = (
-    "Classify the input type. Reply with ONLY one word.\n\n"
-    "text: plain text message, question, conversation\n"
-    "image: contains image, photo, picture, or visual content\n"
-    "worker: automated task, scheduled job, system command\n\n"
-    "Output ONLY one word: text or image or worker"
+# --- 서대리 페르소나 ---
+PERSONA_NAME = "서영락"
+PERSONA_POSITION = "대리"
+PERSONA_PERSONALITY = (
+    "센스있는 쾌남형. 존댓말을 사용하지만 딱딱하지 않고 편안한 톤. "
+    "데이터베이스와 일정관리가 전문 분야."
 )
 
-# --- 9B 실행기 시스템 프롬프트 ---
-EXECUTOR_SYSTEM_PROMPT = (
-    "You are a helpful Korean-speaking assistant. "
-    "Think step by step internally using Chain of Thought reasoning "
-    "before producing your answer.\n\n"
-    "IMPORTANT: Only output your final answer to the user. "
-    "Do NOT show your reasoning steps, do NOT write 'Step 1', 'Step 2', etc. "
-    "Keep your response clean, natural, and conversational in Korean."
+PERSONA_SYSTEM_PROMPT = (
+    f"당신의 이름은 {PERSONA_NAME}이고, 직급은 {PERSONA_POSITION}입니다. "
+    f"{PERSONA_PERSONALITY}\n\n"
+    "대화 시 규칙:\n"
+    "1. 항상 한국어로 답변하세요.\n"
+    "2. 내부 추론(Chain of Thought)은 숨기고 최종 답변만 출력하세요.\n"
+    "3. 사용자의 이전 기억이 제공되면 자연스럽게 활용하세요.\n"
+    "4. 센스있고 쾌활하게, 하지만 전문적으로 답변하세요."
+)
+
+# --- 유저 등록 ---
+REGISTRATION_PROMPT = (
+    "처음 뵙겠습니다! 저는 서대리 서영락입니다. "
+    "원활한 소통을 위해 성함, 직급, 직무를 알려주시겠어요?"
+)
+
+REGISTRATION_VALIDATION_PROMPT = (
+    "Extract user info from the text. Reply in JSON format ONLY.\n"
+    "Required fields: name, position, role\n"
+    "If any field is missing, set it to null.\n"
+    'Example: {"name": "홍길동", "position": "과장", "role": "개발"}\n'
+    "Output ONLY the JSON, nothing else."
+)
+
+# --- 기억 추출 ---
+MEMORY_EXTRACTION_PROMPT = (
+    "Extract key facts from this conversation as knowledge triples.\n"
+    "Output as JSON array of objects with: subject, predicate, object\n"
+    "Focus on: user preferences, important facts, decisions, requests.\n"
+    "Ignore: greetings, filler, small talk.\n"
+    '[{"subject":"사용자","predicate":"선호하는 언어","object":"Python"}]\n'
+    "Output ONLY the JSON array."
+)
+
+# --- KV cache ---
+KV_CACHE_DIR = os.getenv("KV_CACHE_DIR", "kv_cache")
+KV_SLOT_ID = int(os.getenv("KV_SLOT_ID", "0"))
+
+# --- DB ---
+DB_DIR = os.getenv("DB_DIR", "db")
+
+# --- 기억 검색 ---
+MEMORY_SEARCH_PROMPT = (
+    "Given the user message and available memory triples, "
+    "select the most relevant triples for the response.\n"
+    "Output the indices as JSON array: [0, 2, 5]\n"
+    "If none are relevant, output: []\n"
+    "Output ONLY the JSON array."
 )

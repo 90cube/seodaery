@@ -13,6 +13,7 @@ from server.config.constants import (
     EXECUTOR_CTX_SIZE,
     EXECUTOR_GPU_LAYERS,
     EXECUTOR_MODEL_URL,
+    KV_CACHE_DIR,
     ROUTER_CTX_SIZE,
     ROUTER_GPU_LAYERS,
     ROUTER_MODEL_URL,
@@ -43,6 +44,8 @@ def start_model(
         logger.error("모델 파일 없음: %s", model_path)
         return None
 
+    Path(KV_CACHE_DIR).mkdir(parents=True, exist_ok=True)
+
     port = _extract_port(base_url)
     cmd = [
         llama_bin,
@@ -51,6 +54,8 @@ def start_model(
         "--n-gpu-layers", str(gpu_layers),
         "--port", port,
         "--host", "127.0.0.1",
+        "--slots",
+        "--slot-save-path", KV_CACHE_DIR,
     ]
 
     logger.info("시작: %s (port %s)", name, port)
