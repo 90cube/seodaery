@@ -1,10 +1,10 @@
-"""0.8B 시맨틱 검색. 자연어 → 키워드 추출 → FTS5 검색."""
+"""Reasoner 시맨틱 검색. 자연어 → 키워드 추출 → FTS5 검색."""
 
 from __future__ import annotations
 
 import logging
 
-from server.config.constants import ROUTER_MODEL_URL, ROUTER_TIMEOUT_SEC
+from server.config.constants import REASONER_MODEL_URL, REASONER_TIMEOUT_SEC
 from server.data.knowledge_store import (
     find_image,
     get_knowledge_db,
@@ -31,10 +31,10 @@ async def extract_search_keywords(message: str) -> str:
     ]
 
     raw = await request_completion(
-        base_url=ROUTER_MODEL_URL,
+        base_url=REASONER_MODEL_URL,
         messages=messages,
         max_tokens=30,
-        timeout=ROUTER_TIMEOUT_SEC,
+        timeout=REASONER_TIMEOUT_SEC,
         temperature=0.0,
     )
     return raw.strip()

@@ -1,4 +1,4 @@
-"""0.8B 모델을 활용한 기억 추출·검색 도메인 모듈."""
+"""Reasoner 모델을 활용한 기억 추출·검색 도메인 모듈."""
 
 import json
 import logging
@@ -6,9 +6,9 @@ import logging
 from server.config.constants import (
     MEMORY_EXTRACTION_PROMPT,
     MEMORY_SEARCH_PROMPT,
+    REASONER_MODEL_URL,
+    REASONER_TIMEOUT_SEC,
     REGISTRATION_VALIDATION_PROMPT,
-    ROUTER_MODEL_URL,
-    ROUTER_TIMEOUT_SEC,
 )
 from server.system.llama_client import request_completion
 
@@ -36,10 +36,10 @@ async def validate_registration(user_input: str) -> dict | None:
     ]
 
     raw = await request_completion(
-        base_url=ROUTER_MODEL_URL,
+        base_url=REASONER_MODEL_URL,
         messages=messages,
         max_tokens=100,
-        timeout=ROUTER_TIMEOUT_SEC,
+        timeout=REASONER_TIMEOUT_SEC,
         temperature=0.0,
     )
 
@@ -72,10 +72,10 @@ async def extract_memories(conversation_text: str) -> list[dict]:
     ]
 
     raw = await request_completion(
-        base_url=ROUTER_MODEL_URL,
+        base_url=REASONER_MODEL_URL,
         messages=messages,
         max_tokens=500,
-        timeout=ROUTER_TIMEOUT_SEC,
+        timeout=REASONER_TIMEOUT_SEC,
         temperature=0.0,
     )
 
@@ -121,10 +121,10 @@ async def search_relevant_memories(
     ]
 
     raw = await request_completion(
-        base_url=ROUTER_MODEL_URL,
+        base_url=REASONER_MODEL_URL,
         messages=messages,
         max_tokens=50,
-        timeout=ROUTER_TIMEOUT_SEC,
+        timeout=REASONER_TIMEOUT_SEC,
         temperature=0.0,
     )
 

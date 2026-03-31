@@ -6,7 +6,7 @@ import json
 import logging
 import time
 
-from server.config.constants import ROUTER_MODEL_URL, ROUTER_TIMEOUT_SEC
+from server.config.constants import REASONER_MODEL_URL, REASONER_TIMEOUT_SEC
 from server.data.tool_registry import get_tools_db, init_tool_tables, get_enabled_tools
 from server.domain.tool_validator import validate_tool_call, ValidationError
 from server.system.llama_client import request_completion
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 async def run_experiment(
     prompt_template: str,
     test_cases: list[dict],
-    model_url: str = ROUTER_MODEL_URL,
-    timeout: float = ROUTER_TIMEOUT_SEC,
+    model_url: str = REASONER_MODEL_URL,
+    timeout: float = REASONER_TIMEOUT_SEC,
 ) -> dict:
     """프롬프트 변형을 테스트 케이스에 대해 실행하고 정답률을 측정한다.
 
@@ -87,7 +87,7 @@ async def optimize_prompt(
     base_prompt: str,
     variations: list[str],
     test_cases: list[dict],
-    model_url: str = ROUTER_MODEL_URL,
+    model_url: str = REASONER_MODEL_URL,
 ) -> dict:
     """여러 프롬프트 변형을 테스트하고 최적 프롬프트를 반환한다."""
     results = []

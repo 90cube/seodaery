@@ -19,6 +19,7 @@ from server.config.constants import (
     EXECUTOR_MODEL_FILE,
     LLAMA_BIN,
     MODELS_DIR,
+    REASONER_MODEL_FILE,
     ROUTER_MODEL_FILE,
 )
 from server.domain.queue_processor import run_worker, stop_worker
@@ -51,10 +52,12 @@ async def startup():
     models_dir = Path(MODELS_DIR)
     router_path = str(models_dir / ROUTER_MODEL_FILE)
     executor_path = str(models_dir / EXECUTOR_MODEL_FILE)
+    reasoner_path = str(models_dir / REASONER_MODEL_FILE)
 
     await start_all_and_wait(
         router_model=router_path,
         executor_model=executor_path,
+        reasoner_model=reasoner_path,
         llama_bin=LLAMA_BIN,
     )
 
