@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ╔══════════════════════════════════════╗
-echo ║  듀얼 모델 LLM 서버 — 시작          ║
+echo ║  서대리 트리오 모델 서버 — 시작      ║
 echo ╚══════════════════════════════════════╝
 echo.
 
@@ -16,14 +16,23 @@ if not exist "server\.venv\Scripts\activate.bat" (
 set MODELS_DIR=server\models
 set ROUTER_FILE=%MODELS_DIR%\Qwen3.5-0.8B-UD-Q8_K_XL.gguf
 set EXECUTOR_FILE=%MODELS_DIR%\Qwen3.5-9B-Q8_0.gguf
+set REASONER_FILE=%MODELS_DIR%\Qwen3.5-0.8B.Q8_0.gguf
 
-if not exist "%ROUTER_FILE%" (
-    echo [경고] 라우터 모델 없음: %ROUTER_FILE%
-    echo        ROUTER_MODEL_FILE 환경변수로 다른 파일명 지정 가능
+echo [모델 확인]
+if exist "%ROUTER_FILE%" (
+    echo   ✓ 라우터 (0.8B)  : %ROUTER_FILE%
+) else (
+    echo   ✗ 라우터 없음    : %ROUTER_FILE%
 )
-if not exist "%EXECUTOR_FILE%" (
-    echo [경고] 실행기 모델 없음: %EXECUTOR_FILE%
-    echo        EXECUTOR_MODEL_FILE 환경변수로 다른 파일명 지정 가능
+if exist "%EXECUTOR_FILE%" (
+    echo   ✓ 실행기 (9B)    : %EXECUTOR_FILE%
+) else (
+    echo   ✗ 실행기 없음    : %EXECUTOR_FILE%
+)
+if exist "%REASONER_FILE%" (
+    echo   ✓ 추론기 (0.8B)  : %REASONER_FILE%
+) else (
+    echo   - 추론기 없음    : %REASONER_FILE% (선택사항)
 )
 
 :: ── 서버 시작 ──
