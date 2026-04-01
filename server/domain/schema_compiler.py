@@ -7,6 +7,7 @@ DB의 도구·스킬 정의를 읽어 다음을 자동 생성한다:
 """
 
 import logging
+import time
 
 from server.data.skill_store import get_enabled_skills, get_skill, init_skill_table
 from server.data.tool_registry import (
@@ -18,18 +19,27 @@ from server.data.tool_registry import (
 
 logger = logging.getLogger(__name__)
 
+_tool_prompt_cache: str | None = None
+_tool_prompt_time: float = 0
+_CACHE_TTL = 60.0
+
 
 # ── 도구 프롬프트 ─────────────────────────────────────────
 
 
 def compile_tool_prompt() -> str:
-    """활성 도구 목록을 9B용 프롬프트로 컴파일한다."""
+    """활성 도구 목록을 9B용 프롬프트로 컴파일한다. 60초 캐싱."""
+    global _tool_prompt_cache, _tool_prompt_time
+    if _tool_prompt_cache is not None and time.time() - _tool_prompt_time < _CACHE_TTL:
+        return _tool_prompt_cache
     conn = get_tools_db()
     init_tool_tables(conn)
     tools = get_enabled_tools(conn)
 
     if not tools:
         conn.close()
+        _tool_prompt_cache = ""
+        _tool_prompt_time = time.time()
         return ""
 
     lines = ["사용 가능한 도구 목록:"]
@@ -46,7 +56,10 @@ def compile_tool_prompt() -> str:
     conn.close()
 
     lines.append('\n도구 호출 형식: {"tool": "tool_id", "params": {...}}')
-    return "\n".join(lines)
+    result = "\n".join(lines)
+    _tool_prompt_cache = result
+    _tool_prompt_time = time.time()
+    return result
 
 
 def _format_params(params: list[dict]) -> list[str]:

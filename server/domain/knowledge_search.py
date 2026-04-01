@@ -42,12 +42,20 @@ async def extract_search_keywords(message: str) -> str:
 
 async def search_game_knowledge(message: str) -> list[dict]:
     """자연어 메시지에서 키워드를 추출하고 지식 DB를 검색한다."""
+    # 빈 DB면 검색 건너뜀 (0.8B 호출 절약)
+    conn = get_knowledge_db()
+    init_knowledge_tables(conn)
+    count = conn.execute("SELECT COUNT(*) FROM knowledge").fetchone()[0]
+    if count == 0:
+        conn.close()
+        return []
+    conn.close()
+
     keywords = await extract_search_keywords(message)
     if not keywords:
         return []
 
     conn = get_knowledge_db()
-    init_knowledge_tables(conn)
 
     try:
         results = search_knowledge(conn, keywords, limit=5)
