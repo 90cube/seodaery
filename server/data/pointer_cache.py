@@ -105,6 +105,15 @@ def promote_to_l1(conn: sqlite3.Connection, min_hits: int = 3) -> int:
     return len(rows)
 
 
+def cleanup_empty(conn: sqlite3.Connection) -> int:
+    """빈 response_text를 가진 캐시 엔트리를 삭제한다."""
+    cur = conn.execute(
+        "DELETE FROM pointers WHERE response_text IS NULL OR response_text = ''",
+    )
+    conn.commit()
+    return cur.rowcount
+
+
 def get_cache_stats(conn: sqlite3.Connection) -> dict:
     """캐시 통계를 반환한다."""
     total = conn.execute("SELECT COUNT(*) FROM pointers").fetchone()[0]

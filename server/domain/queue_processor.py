@@ -129,7 +129,8 @@ async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
         content = await _direct_response(session)
 
     add_message(user_id, "assistant", content)
-    save_to_cache(user_id, message, "", content)
+    if content:
+        save_to_cache(user_id, message, "", content)
     return _ok_result(request_id, content, EXECUTOR_MODEL_NAME, "text")
 
 

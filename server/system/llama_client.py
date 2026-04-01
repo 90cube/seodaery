@@ -2,22 +2,33 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
 import httpx
 
 from server.config.constants import LLAMA_COMPLETION_PATH
 
+logger = logging.getLogger(__name__)
+
 _THINK_PATTERN = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 def _strip_think_tags(text: str) -> str:
     """Qwen3.5의 <think>...</think> 태그를 제거하고 실제 응답만 반환한다."""
+    if not text:
+        return ""
+    # 1차: <think>...</think> 정규식 제거
     cleaned = _THINK_PATTERN.sub("", text).strip()
     if cleaned:
         return cleaned
-    # think 안에만 내용이 있는 경우: 태그만 제거하고 내용 유지
-    return re.sub(r"</?think>", "", text).strip() or text.strip()
+    # 2차: </think> 이후 텍스트 추출
+    if "</think>" in text:
+        after = text.split("</think>", 1)[1].strip()
+        if after:
+            return after
+    # 3차: 태그만 제거하고 내용 유지 (사고과정이라도 반환)
+    return re.sub(r"</?think>", "", text).strip()
 
 
 async def request_completion(
@@ -42,7 +53,15 @@ async def request_completion(
 
     data = resp.json()
     raw = data["choices"][0]["message"]["content"]
-    return _strip_think_tags(raw)
+
+    logger.debug("raw 응답 (%d자): %.200s", len(raw), raw)
+
+    result = _strip_think_tags(raw)
+    if not result:
+        logger.warning("빈 응답! raw(%d자): %.300s", len(raw), raw)
+        result = raw.strip() or "(응답 없음)"
+
+    return result
 
 
 async def health_check(base_url: str) -> bool:
