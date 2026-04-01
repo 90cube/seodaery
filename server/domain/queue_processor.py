@@ -127,7 +127,7 @@ async def _handle_chat(
     """기존 유저: 캐시 조회 → 포인터 구성 → 9B 응답 → 캐시 저장."""
     session = get_session(user_id)
     if not session:
-        start_session(user_id)
+        session = start_session(user_id)
 
     add_message(user_id, "user", message)
 
