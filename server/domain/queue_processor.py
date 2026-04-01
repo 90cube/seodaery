@@ -12,6 +12,12 @@ from server.config.constants import (
 )
 from server.data.database import get_db, init_tables
 from server.data.memory_store import get_important_triples
+from server.domain.cache_router import lookup, save_to_cache
+from server.domain.pointer_builder import (
+    assemble_pointer,
+    build_knowledge_pointer,
+    build_user_pointer,
+)
 from server.domain.react_loop import run_react_loop
 from server.domain.knowledge_search import (
     format_knowledge_context,
@@ -118,34 +124,50 @@ async def _handle_new_user(
 async def _handle_chat(
     request_id: str, user_id: str, message: str
 ) -> dict:
-    """기존 유저: 기억 검색 → 컨텍스트 구성 → 9B 응답."""
+    """기존 유저: 캐시 조회 → 포인터 구성 → 9B 응답 → 캐시 저장."""
     session = get_session(user_id)
     if not session:
         start_session(user_id)
 
     add_message(user_id, "user", message)
 
-    # 0.8B로 관련 기억 검색
+    # L1/L2 캐시 조회
+    cache_hit = lookup(user_id, message)
+    if cache_hit.hit and cache_hit.response_text:
+        add_message(user_id, "assistant", cache_hit.response_text)
+        return {
+            "request_id": request_id,
+            "content": cache_hit.response_text,
+            "model_used": f"cache-{cache_hit.level}",
+            "input_type": "cached",
+            "status": RequestStatus.COMPLETED.value,
+        }
+
+    # 스키마 포인터 구성
     conn = get_db(user_id)
     init_tables(conn)
-    all_triples = get_important_triples(conn, limit=30)
+    triple_count = len(get_important_triples(conn, limit=30))
     conn.close()
 
-    triple_dicts = [
-        {"subject": t[0], "predicate": t[1], "object": t[2]}
-        for t in all_triples
-    ]
-    relevant = await search_relevant_memories(message, triple_dicts)
+    user_ptr = build_user_pointer(
+        user_id,
+        session.get("user"),
+        triple_count,
+    )
 
-    # 지식 DB 검색
     knowledge_results = await search_game_knowledge(message)
-    knowledge_text = format_knowledge_context(knowledge_results)
+    knowledge_ptr = build_knowledge_pointer(knowledge_results)
 
-    # 컨텍스트 구성 → ReAct 루프 (도구 호출 가능)
-    messages = build_context(user_id, relevant, knowledge_text)
+    pointer = assemble_pointer(user_ptr, knowledge_ptr)
+
+    # 포인터 기반 컨텍스트 → ReAct 루프
+    messages = build_context(user_id, schema_pointer=pointer)
     content = await run_react_loop(messages)
 
     add_message(user_id, "assistant", content)
+
+    # 캐시 저장 (다음번 동일 질문 시 L1/L2 히트)
+    save_to_cache(user_id, message, pointer, content)
 
     return {
         "request_id": request_id,

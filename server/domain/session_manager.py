@@ -79,27 +79,41 @@ def build_context(
     user_id: str,
     relevant_memories: list[dict] | None = None,
     knowledge_text: str = "",
+    schema_pointer: str = "",
 ) -> list[dict]:
-    """9B에게 보낼 메시지 컨텍스트를 구성한다."""
+    """9B에게 보낼 메시지 컨텍스트를 구성한다.
+
+    schema_pointer가 있으면 포인터 기반 경량 컨텍스트,
+    없으면 기존 방식(전체 데이터 주입)으로 폴백.
+    """
     session = _sessions.get(user_id)
     if not session:
         return []
 
     system_parts = [PERSONA_SYSTEM_PROMPT]
 
-    if session.get("user"):
-        user = session["user"]
-        system_parts.append(
-            f"\n현재 대화 상대: {user.get('name', '?')}"
-            f" ({user.get('position', '?')}, {user.get('role', '?')})"
-        )
+    if schema_pointer:
+        # 포인터 모드: 데이터 위치만 전달, 실제 데이터는 도구로 fetch
+        from server.domain.pointer_builder import build_pointer_context
+        system_parts.append(f"\n{build_pointer_context(schema_pointer)}")
+    else:
+        # 폴백: 기존 전체 주입 방식
+        if session.get("user"):
+            user = session["user"]
+            system_parts.append(
+                f"\n현재 대화 상대: {user.get('name', '?')}"
+                f" ({user.get('position', '?')}, {user.get('role', '?')})"
+            )
 
-    if relevant_memories:
-        memory_text = "\n".join(
-            f"- {m['subject']} {m['predicate']} {m['object']}"
-            for m in relevant_memories
-        )
-        system_parts.append(f"\n관련 기억:\n{memory_text}")
+        if relevant_memories:
+            memory_text = "\n".join(
+                f"- {m['subject']} {m['predicate']} {m['object']}"
+                for m in relevant_memories
+            )
+            system_parts.append(f"\n관련 기억:\n{memory_text}")
+
+        if knowledge_text:
+            system_parts.append(f"\n{knowledge_text}")
 
     if session.get("directives"):
         dir_text = "\n".join(
@@ -109,13 +123,8 @@ def build_context(
         system_parts.append(f"\n유저 지침:\n{dir_text}")
 
     if session.get("skills"):
-        skill_text = ", ".join(
-            d["content"] for d in session["skills"]
-        )
+        skill_text = ", ".join(d["content"] for d in session["skills"])
         system_parts.append(f"\n활성 스킬: {skill_text}")
-
-    if knowledge_text:
-        system_parts.append(f"\n{knowledge_text}")
 
     messages = [{"role": "system", "content": "\n".join(system_parts)}]
     messages.extend(session["messages"])
