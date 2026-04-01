@@ -14,7 +14,10 @@ _THINK_PATTERN = re.compile(r"<think>.*?</think>", re.DOTALL)
 def _strip_think_tags(text: str) -> str:
     """Qwen3.5의 <think>...</think> 태그를 제거하고 실제 응답만 반환한다."""
     cleaned = _THINK_PATTERN.sub("", text).strip()
-    return cleaned if cleaned else text.strip()
+    if cleaned:
+        return cleaned
+    # think 안에만 내용이 있는 경우: 태그만 제거하고 내용 유지
+    return re.sub(r"</?think>", "", text).strip() or text.strip()
 
 
 async def request_completion(
