@@ -6,7 +6,8 @@ import sys
 
 sys.path.insert(0, ".")
 
-from server.domain.autoresearch import optimize_prompt, run_experiment
+# autoresearch 모듈 제거됨 — 이 도구는 현재 비활성 상태
+# from server.domain.autoresearch import optimize_prompt, run_experiment
 
 EXAMPLE_TEST_CASES = [
     {
