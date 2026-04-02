@@ -45,7 +45,6 @@ async def request_completion(
         "max_tokens": max_tokens,
         "temperature": temperature,
         "stream": False,
-        "think": False,
     }
 
     async with httpx.AsyncClient(timeout=timeout) as client:

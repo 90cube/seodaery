@@ -8,13 +8,13 @@ EXECUTOR_MODEL_URL = os.getenv("EXECUTOR_MODEL_URL", "http://localhost:8082")
 LLAMA_COMPLETION_PATH = "/v1/chat/completions"
 
 # --- 모델 식별자 ---
-ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "bonsai-8b-1bit")
+ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "qwen3.5-0.8b")
 EXECUTOR_MODEL_NAME = os.getenv("EXECUTOR_MODEL_NAME", "qwen3.5-9b")
 
 # --- VRAM 할당 (4070 Ti Super 16GB 기준) ---
 ROUTER_GPU_LAYERS = int(os.getenv("ROUTER_GPU_LAYERS", "99"))
 EXECUTOR_GPU_LAYERS = int(os.getenv("EXECUTOR_GPU_LAYERS", "99"))
-ROUTER_CTX_SIZE = int(os.getenv("ROUTER_CTX_SIZE", "4096"))
+ROUTER_CTX_SIZE = int(os.getenv("ROUTER_CTX_SIZE", "2048"))
 EXECUTOR_CTX_SIZE = int(os.getenv("EXECUTOR_CTX_SIZE", "8192"))
 
 # --- FastAPI ---
@@ -23,7 +23,7 @@ API_PORT = int(os.getenv("API_PORT", "8000"))
 
 # --- 모델 파일 경로 ---
 MODELS_DIR = os.getenv("MODELS_DIR", "models")
-ROUTER_MODEL_FILE = os.getenv("ROUTER_MODEL_FILE", "Bonsai-8B.gguf")
+ROUTER_MODEL_FILE = os.getenv("ROUTER_MODEL_FILE", "Qwen3.5-0.8B-UD-Q8_K_XL.gguf")
 EXECUTOR_MODEL_FILE = os.getenv("EXECUTOR_MODEL_FILE", "Qwen3.5-9B-Q8_0.gguf")
 
 # --- llama-server 바이너리 ---
