@@ -15,7 +15,7 @@ from server.data.user_store import (
 )
 from server.data.memory_store import get_important_triples, search_triples, store_triple
 from server.data.directive_store import get_directives, get_active_skills
-from server.config.constants import PERSONA_SYSTEM_PROMPT, REGISTRATION_PROMPT
+from server.config.constants import REGISTRATION_PROMPT
 
 _sessions: dict[str, dict] = {}
 
@@ -80,50 +80,6 @@ def get_session(user_id: str) -> dict | None:
     """현재 세션을 반환한다."""
     return _sessions.get(user_id)
 
-
-def build_context(
-    user_id: str,
-    relevant_memories: list[dict] | None = None,
-    knowledge_text: str = "",
-) -> list[dict]:
-    """9B에게 보낼 메시지 컨텍스트를 구성한다."""
-    session = _sessions.get(user_id)
-    if not session:
-        return []
-
-    system_parts = [PERSONA_SYSTEM_PROMPT]
-
-    if session.get("user"):
-        user = session["user"]
-        system_parts.append(
-            f"\n현재 대화 상대: {user.get('name', '?')}"
-            f" ({user.get('position', '?')}, {user.get('role', '?')})"
-        )
-
-    if relevant_memories:
-        memory_text = "\n".join(
-            f"- {m['subject']} {m['predicate']} {m['object']}"
-            for m in relevant_memories
-        )
-        system_parts.append(f"\n관련 기억:\n{memory_text}")
-
-    if knowledge_text:
-        system_parts.append(f"\n{knowledge_text}")
-
-    if session.get("directives"):
-        dir_text = "\n".join(
-            f"- [{d['type']}] {d['content']}"
-            for d in session["directives"]
-        )
-        system_parts.append(f"\n유저 지침:\n{dir_text}")
-
-    if session.get("skills"):
-        skill_text = ", ".join(d["content"] for d in session["skills"])
-        system_parts.append(f"\n활성 스킬: {skill_text}")
-
-    messages = [{"role": "system", "content": "\n".join(system_parts)}]
-    messages.extend(session["messages"])
-    return messages
 
 
 def get_conversation_text(user_id: str) -> str:

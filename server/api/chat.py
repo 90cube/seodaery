@@ -19,7 +19,7 @@ async def chat(body: dict, x_user_id: str = Header(default="anonymous")):
     """채팅 요청을 큐에 등록하고 request_id를 반환한다."""
     message = body.get("message", "")
     if not message:
-        return {"error": "message is required"}, 400
+        return JSONResponse(status_code=400, content={"error": "message is required"})
 
     req = ChatRequest(message=message)
     queue_len = await enqueue_request(
@@ -61,13 +61,14 @@ async def queue_status():
 async def get_me(x_user_id: str = Header(default="anonymous")):
     """유저 정보를 반환한다. 미등록이면 404."""
     conn = get_db(x_user_id)
-    init_tables(conn)
-    if not user_exists(conn, x_user_id):
+    try:
+        init_tables(conn)
+        if not user_exists(conn, x_user_id):
+            return JSONResponse(status_code=404, content={"registered": False})
+        user = get_user(conn, x_user_id)
+        return {"registered": True, **user}
+    finally:
         conn.close()
-        return JSONResponse(status_code=404, content={"registered": False})
-    user = get_user(conn, x_user_id)
-    conn.close()
-    return {"registered": True, **user}
 
 
 @router.post("/register")

@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ==========================================
-echo   서대리 듀얼 모델 서버
+echo   서대리 LLM 서버
 echo ==========================================
 echo.
 
@@ -53,12 +53,10 @@ if not exist "server\.venv\Scripts\activate.bat" (
 
 :: -- 모델 파일 확인 --
 set MODELS_DIR=server\models
-set ROUTER_FILE=%MODELS_DIR%\Qwen3.5-0.8B-UD-Q8_K_XL.gguf
 set EXECUTOR_FILE=%MODELS_DIR%\%EXECUTOR_MODEL_FILE%
 
 echo [모델 확인]
-if exist "%ROUTER_FILE%" ( echo   [O] Router : %ROUTER_FILE% ) else ( echo   [X] Router : %ROUTER_FILE% )
-if exist "%EXECUTOR_FILE%" ( echo   [O] Main   : %EXECUTOR_FILE% ) else ( echo   [X] Main   : %EXECUTOR_FILE% )
+if exist "%EXECUTOR_FILE%" ( echo   [O] %MODEL_LABEL% : %EXECUTOR_FILE% ) else ( echo   [X] %MODEL_LABEL% : %EXECUTOR_FILE% )
 
 :: -- 서버 시작 --
 echo.

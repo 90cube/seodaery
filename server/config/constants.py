@@ -33,6 +33,52 @@ LIGHT_TIMEOUT_SEC = float(os.getenv("LIGHT_TIMEOUT_SEC", "30.0"))
 EXECUTOR_MAX_TOKENS = 2048
 LIGHT_MAX_TOKENS = 500
 
+# --- 모델 프로파일 ---
+# 모델별 동작 차이를 선언적으로 관리한다.
+# EXECUTOR_MODEL_NAME 소문자 substring 매칭. 미등록 모델은 _DEFAULT_PROFILE 적용.
+_DEFAULT_PROFILE: dict = {
+    "temperature": 0.4,
+    "max_tokens": 2048,
+    "think_param": None,
+    "strip_think_tags": False,
+}
+
+MODEL_PROFILES: dict[str, dict] = {
+    "qwen": {
+        "temperature": 0.7,
+        "max_tokens": 2048,
+        "think_param": False,
+        "strip_think_tags": True,
+    },
+    "glm": {
+        "temperature": 0.5,
+        "max_tokens": 2048,
+        "think_param": None,
+        "strip_think_tags": False,
+    },
+    "ministral": {
+        "temperature": 0.4,
+        "max_tokens": 2048,
+        "think_param": None,
+        "strip_think_tags": False,
+    },
+    "nemotron": {
+        "temperature": 0.3,
+        "max_tokens": 2048,
+        "think_param": None,
+        "strip_think_tags": False,
+    },
+}
+
+
+def get_model_profile() -> dict:
+    """EXECUTOR_MODEL_NAME에서 모델 패밀리를 추출하여 프로파일 반환."""
+    name_lower = EXECUTOR_MODEL_NAME.lower()
+    for family, profile in MODEL_PROFILES.items():
+        if family in name_lower:
+            return profile
+    return _DEFAULT_PROFILE
+
 # --- 서대리 페르소나 ---
 PERSONA_NAME = "서영락"
 PERSONA_POSITION = "대리"

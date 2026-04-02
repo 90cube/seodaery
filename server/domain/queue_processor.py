@@ -8,13 +8,13 @@ import logging
 import re
 
 from server.config.constants import (
-    EXECUTOR_MAX_TOKENS,
     EXECUTOR_MODEL_NAME,
     EXECUTOR_MODEL_URL,
     EXECUTOR_TIMEOUT_SEC,
     PERSONA_SYSTEM_PROMPT,
     QUEUE_TIMEOUT_SEC,
     REGISTRATION_PROMPT,
+    get_model_profile,
 )
 from server.domain.memory_extractor import validate_registration
 from server.domain.schema_compiler import compile_tool_prompt
@@ -106,13 +106,17 @@ async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
 
 
 async def _generate_with_tools(messages: list[dict]) -> str:
-    """9B 응답을 생성하고, 도구 호출이 있으면 실행 후 재생성한다."""
+    """응답을 생성하고, 도구 호출이 있으면 실행 후 재생성한다."""
+    profile = get_model_profile()
     for round_num in range(1, _MAX_TOOL_ROUNDS + 1):
         response = await request_completion(
             base_url=EXECUTOR_MODEL_URL,
             messages=messages,
-            max_tokens=EXECUTOR_MAX_TOKENS,
+            max_tokens=profile["max_tokens"],
             timeout=EXECUTOR_TIMEOUT_SEC,
+            temperature=profile["temperature"],
+            think_param=profile["think_param"],
+            strip_think=profile["strip_think_tags"],
         )
 
         # 도구 호출 JSON 감지
@@ -137,8 +141,11 @@ async def _generate_with_tools(messages: list[dict]) -> str:
     return await request_completion(
         base_url=EXECUTOR_MODEL_URL,
         messages=messages,
-        max_tokens=EXECUTOR_MAX_TOKENS,
+        max_tokens=profile["max_tokens"],
         timeout=EXECUTOR_TIMEOUT_SEC,
+        temperature=profile["temperature"],
+        think_param=profile["think_param"],
+        strip_think=profile["strip_think_tags"],
     )
 
 

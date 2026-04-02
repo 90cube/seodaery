@@ -28,7 +28,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-app = FastAPI(title="Dual-Model LLM Server", version="0.2.0")
+app = FastAPI(title="서대리 LLM Server", version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,

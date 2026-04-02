@@ -37,16 +37,19 @@ async def request_completion(
     max_tokens: int,
     timeout: float,
     temperature: float = 0.7,
+    think_param: bool | None = None,
+    strip_think: bool = False,
 ) -> str:
     """llama.cpp 서버에 chat completion 요청을 보내고 응답 텍스트를 반환한다."""
     url = f"{base_url}{LLAMA_COMPLETION_PATH}"
-    payload = {
+    payload: dict = {
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": temperature,
         "stream": False,
-        "think": False,
     }
+    if think_param is not None:
+        payload["think"] = think_param
 
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -68,7 +71,7 @@ async def request_completion(
 
     logger.debug("raw 응답 (%d자): %.200s", len(raw), raw)
 
-    result = _strip_think_tags(raw)
+    result = _strip_think_tags(raw) if strip_think else raw.strip()
     if not result:
         logger.warning("빈 응답! raw(%d자): %.300s", len(raw), raw)
         result = raw.strip() or "(응답 없음)"
