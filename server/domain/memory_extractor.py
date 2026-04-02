@@ -7,8 +7,8 @@ import re
 from server.config.constants import (
     MEMORY_EXTRACTION_PROMPT,
     MEMORY_SEARCH_PROMPT,
-    REASONER_MODEL_URL,
-    REASONER_TIMEOUT_SEC,
+    ROUTER_MODEL_URL,
+    ROUTER_TIMEOUT_SEC,
     REGISTRATION_VALIDATION_PROMPT,
 )
 from server.system.llama_client import request_completion
@@ -62,10 +62,10 @@ async def validate_registration(user_input: str) -> dict | None:
             {"role": "user", "content": user_input},
         ]
         raw = await request_completion(
-            base_url=REASONER_MODEL_URL,
+            base_url=ROUTER_MODEL_URL,
             messages=messages,
             max_tokens=100,
-            timeout=REASONER_TIMEOUT_SEC,
+            timeout=ROUTER_TIMEOUT_SEC,
             temperature=0.0,
         )
         fragment = _extract_json_fragment(raw, "{", "}")
@@ -98,10 +98,10 @@ async def extract_memories(conversation_text: str) -> list[dict]:
     ]
 
     raw = await request_completion(
-        base_url=REASONER_MODEL_URL,
+        base_url=ROUTER_MODEL_URL,
         messages=messages,
         max_tokens=500,
-        timeout=REASONER_TIMEOUT_SEC,
+        timeout=ROUTER_TIMEOUT_SEC,
         temperature=0.0,
     )
 
@@ -147,10 +147,10 @@ async def search_relevant_memories(
     ]
 
     raw = await request_completion(
-        base_url=REASONER_MODEL_URL,
+        base_url=ROUTER_MODEL_URL,
         messages=messages,
         max_tokens=50,
-        timeout=REASONER_TIMEOUT_SEC,
+        timeout=ROUTER_TIMEOUT_SEC,
         temperature=0.0,
     )
 

@@ -19,7 +19,6 @@ from server.config.constants import (
     EXECUTOR_MODEL_FILE,
     LLAMA_BIN,
     MODELS_DIR,
-    REASONER_MODEL_FILE,
     ROUTER_MODEL_FILE,
 )
 from server.domain.queue_processor import run_worker, stop_worker
@@ -52,21 +51,10 @@ async def startup():
     models_dir = Path(MODELS_DIR)
     router_path = str(models_dir / ROUTER_MODEL_FILE)
     executor_path = str(models_dir / EXECUTOR_MODEL_FILE)
-    reasoner_path = str(models_dir / REASONER_MODEL_FILE)
-
-    # 빈 캐시 정리
-    from server.data.pointer_cache import cleanup_empty, get_pointer_db, init_pointer_tables
-    ptr_conn = get_pointer_db()
-    init_pointer_tables(ptr_conn)
-    removed = cleanup_empty(ptr_conn)
-    ptr_conn.close()
-    if removed:
-        logging.getLogger(__name__).info("빈 캐시 %d건 정리", removed)
 
     await start_all_and_wait(
         router_model=router_path,
         executor_model=executor_path,
-        reasoner_model=reasoner_path,
         llama_bin=LLAMA_BIN,
     )
 

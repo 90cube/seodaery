@@ -5,21 +5,17 @@ import os
 # --- llama.cpp 서버 엔드포인트 ---
 ROUTER_MODEL_URL = os.getenv("ROUTER_MODEL_URL", "http://localhost:8081")
 EXECUTOR_MODEL_URL = os.getenv("EXECUTOR_MODEL_URL", "http://localhost:8082")
-REASONER_MODEL_URL = os.getenv("REASONER_MODEL_URL", "http://localhost:8083")
 LLAMA_COMPLETION_PATH = "/v1/chat/completions"
 
 # --- 모델 식별자 ---
-ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "qwen3.5-0.8b")
+ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "bonsai-8b-1bit")
 EXECUTOR_MODEL_NAME = os.getenv("EXECUTOR_MODEL_NAME", "qwen3.5-9b")
-REASONER_MODEL_NAME = os.getenv("REASONER_MODEL_NAME", "qwen3.5-0.8b-opus")
 
 # --- VRAM 할당 (4070 Ti Super 16GB 기준) ---
 ROUTER_GPU_LAYERS = int(os.getenv("ROUTER_GPU_LAYERS", "99"))
 EXECUTOR_GPU_LAYERS = int(os.getenv("EXECUTOR_GPU_LAYERS", "99"))
-REASONER_GPU_LAYERS = int(os.getenv("REASONER_GPU_LAYERS", "99"))
-ROUTER_CTX_SIZE = int(os.getenv("ROUTER_CTX_SIZE", "2048"))
+ROUTER_CTX_SIZE = int(os.getenv("ROUTER_CTX_SIZE", "4096"))
 EXECUTOR_CTX_SIZE = int(os.getenv("EXECUTOR_CTX_SIZE", "8192"))
-REASONER_CTX_SIZE = int(os.getenv("REASONER_CTX_SIZE", "4096"))
 
 # --- FastAPI ---
 API_HOST = os.getenv("API_HOST", "127.0.0.1")
@@ -27,9 +23,8 @@ API_PORT = int(os.getenv("API_PORT", "8000"))
 
 # --- 모델 파일 경로 ---
 MODELS_DIR = os.getenv("MODELS_DIR", "models")
-ROUTER_MODEL_FILE = os.getenv("ROUTER_MODEL_FILE", "Qwen3.5-0.8B-UD-Q8_K_XL.gguf")
+ROUTER_MODEL_FILE = os.getenv("ROUTER_MODEL_FILE", "Bonsai-8B.gguf")
 EXECUTOR_MODEL_FILE = os.getenv("EXECUTOR_MODEL_FILE", "Qwen3.5-9B-Q8_0.gguf")
-REASONER_MODEL_FILE = os.getenv("REASONER_MODEL_FILE", "Qwen3.5-0.8B.Q8_0.gguf")
 
 # --- llama-server 바이너리 ---
 LLAMA_BIN = os.getenv("LLAMA_BIN", "llama-server")
@@ -40,10 +35,8 @@ QUEUE_TIMEOUT_SEC = float(os.getenv("QUEUE_TIMEOUT_SEC", "60.0"))
 # --- 타임아웃 ---
 ROUTER_TIMEOUT_SEC = float(os.getenv("ROUTER_TIMEOUT_SEC", "30.0"))
 EXECUTOR_TIMEOUT_SEC = float(os.getenv("EXECUTOR_TIMEOUT_SEC", "120.0"))
-REASONER_TIMEOUT_SEC = float(os.getenv("REASONER_TIMEOUT_SEC", "30.0"))
-ROUTER_MAX_TOKENS = 10
+ROUTER_MAX_TOKENS = 500
 EXECUTOR_MAX_TOKENS = 2048
-REASONER_MAX_TOKENS = 500
 
 # --- 서대리 페르소나 ---
 PERSONA_NAME = "서영락"
@@ -76,7 +69,7 @@ REGISTRATION_VALIDATION_PROMPT = (
     "Extract user info from the text. Reply in JSON format ONLY.\n"
     "Required fields: name, position, role\n"
     "If any field is missing, set it to null.\n"
-    'Example: {"name": "홍길동", "position": "과장", "role": "개발"}\n'
+    '{"name": "홍길동", "position": "과장", "role": "개발"}\n'
     "Output ONLY the JSON, nothing else."
 )
 

@@ -14,9 +14,6 @@ from server.config.constants import (
     EXECUTOR_GPU_LAYERS,
     EXECUTOR_MODEL_URL,
     KV_CACHE_DIR,
-    REASONER_CTX_SIZE,
-    REASONER_GPU_LAYERS,
-    REASONER_MODEL_URL,
     ROUTER_CTX_SIZE,
     ROUTER_GPU_LAYERS,
     ROUTER_MODEL_URL,
@@ -103,10 +100,9 @@ async def wait_until_ready(name: str, base_url: str) -> bool:
 async def start_all_and_wait(
     router_model: str,
     executor_model: str,
-    reasoner_model: str = "",
     llama_bin: str = "llama-server",
 ) -> None:
-    """모든 프로세스를 시작하고 준비될 때까지 대기한다."""
+    """두 프로세스를 시작하고 준비될 때까지 대기한다."""
     start_model(
         name="router",
         model_path=router_model,
@@ -128,17 +124,6 @@ async def start_all_and_wait(
         wait_until_ready("router", ROUTER_MODEL_URL),
         wait_until_ready("executor", EXECUTOR_MODEL_URL),
     ]
-
-    if reasoner_model and Path(reasoner_model).exists():
-        start_model(
-            name="reasoner",
-            model_path=reasoner_model,
-            base_url=REASONER_MODEL_URL,
-            ctx_size=REASONER_CTX_SIZE,
-            gpu_layers=REASONER_GPU_LAYERS,
-            llama_bin=llama_bin,
-        )
-        waiters.append(wait_until_ready("reasoner", REASONER_MODEL_URL))
 
     results = await asyncio.gather(*waiters)
 
