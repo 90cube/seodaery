@@ -2,7 +2,7 @@
 
 DB의 도구·스킬 정의를 읽어 다음을 자동 생성한다:
 - 9B 모델용 도구 프롬프트
-- 0.8B 분류기용 intent 목록
+- intent 목록
 - 스킬 instruction 컨텍스트 블록
 """
 
@@ -81,7 +81,7 @@ def _format_params(params: list[dict]) -> list[str]:
 
 
 def compile_intent_list() -> str:
-    """0.8B 분류기용 intent 목록을 컴파일한다."""
+    """intent 목록을 컴파일한다."""
     conn = get_tools_db()
     init_tool_tables(conn)
     init_skill_table(conn)

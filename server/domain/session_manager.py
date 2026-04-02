@@ -3,6 +3,7 @@
 유저 세션의 생성, 대화 히스토리, 최초 접촉 감지, 세션 종료를 담당한다.
 """
 
+import logging
 import time
 
 from server.data.database import get_db, init_tables
@@ -22,23 +23,26 @@ _sessions: dict[str, dict] = {}
 def is_new_user(user_id: str) -> bool:
     """SQLite에서 유저 존재 여부를 확인한다."""
     conn = get_db(user_id)
-    init_tables(conn)
-    exists = user_exists(conn, user_id)
-    conn.close()
-    return not exists
+    try:
+        init_tables(conn)
+        exists = user_exists(conn, user_id)
+        return not exists
+    finally:
+        conn.close()
 
 
 def start_session(user_id: str) -> dict:
     """세션을 시작하고 유저 정보를 로드한다."""
     conn = get_db(user_id)
-    init_tables(conn)
-    update_last_seen(conn, user_id)
-
-    user = get_user(conn, user_id)
-    directives = get_directives(conn)
-    skills = get_active_skills(conn)
-    important_memories = get_important_triples(conn)
-    conn.close()
+    try:
+        init_tables(conn)
+        update_last_seen(conn, user_id)
+        user = get_user(conn, user_id)
+        directives = get_directives(conn)
+        skills = get_active_skills(conn)
+        important_memories = get_important_triples(conn)
+    finally:
+        conn.close()
 
     session = {
         "user_id": user_id,
@@ -57,9 +61,11 @@ def register_user(
 ) -> None:
     """신규 유저를 등록한다."""
     conn = get_db(user_id)
-    init_tables(conn)
-    create_user(conn, user_id, name, position, role)
-    conn.close()
+    try:
+        init_tables(conn)
+        create_user(conn, user_id, name, position, role)
+    finally:
+        conn.close()
 
 
 def add_message(user_id: str, role: str, content: str) -> None:
@@ -79,41 +85,30 @@ def build_context(
     user_id: str,
     relevant_memories: list[dict] | None = None,
     knowledge_text: str = "",
-    schema_pointer: str = "",
 ) -> list[dict]:
-    """9B에게 보낼 메시지 컨텍스트를 구성한다.
-
-    schema_pointer가 있으면 포인터 기반 경량 컨텍스트,
-    없으면 기존 방식(전체 데이터 주입)으로 폴백.
-    """
+    """9B에게 보낼 메시지 컨텍스트를 구성한다."""
     session = _sessions.get(user_id)
     if not session:
         return []
 
     system_parts = [PERSONA_SYSTEM_PROMPT]
 
-    if schema_pointer:
-        # 포인터 모드: 데이터 위치만 전달, 실제 데이터는 도구로 fetch
-        from server.domain.pointer_builder import build_pointer_context
-        system_parts.append(f"\n{build_pointer_context(schema_pointer)}")
-    else:
-        # 폴백: 기존 전체 주입 방식
-        if session.get("user"):
-            user = session["user"]
-            system_parts.append(
-                f"\n현재 대화 상대: {user.get('name', '?')}"
-                f" ({user.get('position', '?')}, {user.get('role', '?')})"
-            )
+    if session.get("user"):
+        user = session["user"]
+        system_parts.append(
+            f"\n현재 대화 상대: {user.get('name', '?')}"
+            f" ({user.get('position', '?')}, {user.get('role', '?')})"
+        )
 
-        if relevant_memories:
-            memory_text = "\n".join(
-                f"- {m['subject']} {m['predicate']} {m['object']}"
-                for m in relevant_memories
-            )
-            system_parts.append(f"\n관련 기억:\n{memory_text}")
+    if relevant_memories:
+        memory_text = "\n".join(
+            f"- {m['subject']} {m['predicate']} {m['object']}"
+            for m in relevant_memories
+        )
+        system_parts.append(f"\n관련 기억:\n{memory_text}")
 
-        if knowledge_text:
-            system_parts.append(f"\n{knowledge_text}")
+    if knowledge_text:
+        system_parts.append(f"\n{knowledge_text}")
 
     if session.get("directives"):
         dir_text = "\n".join(
@@ -159,15 +154,22 @@ async def save_session_memories(user_id: str) -> int:
     if not conversation:
         return 0
 
-    triples = await extract_memories(conversation)
+    try:
+        triples = await extract_memories(conversation)
+    except Exception:
+        logging.getLogger(__name__).exception("기억 추출 실패: %s", user_id)
+        return 0
+
     if not triples:
         return 0
 
     conn = get_db(user_id)
-    init_tables(conn)
-    for t in triples:
-        store_triple(conn, t["subject"], t["predicate"], t["object"])
-    conn.close()
+    try:
+        init_tables(conn)
+        for t in triples:
+            store_triple(conn, t["subject"], t["predicate"], t["object"])
+    finally:
+        conn.close()
 
     end_session(user_id)
     return len(triples)

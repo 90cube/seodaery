@@ -35,7 +35,7 @@ async def run_growth_cycle(user_id: str) -> dict:
         end_session(user_id)
         return {"extracted": 0, "promoted": 0}
 
-    # 2. 0.8B 추론기로 사실 추출
+    # 2. LLM으로 사실 추출
     triples = await extract_memories(conversation)
     extracted = 0
 

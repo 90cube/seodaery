@@ -14,9 +14,6 @@ from server.config.constants import (
     EXECUTOR_GPU_LAYERS,
     EXECUTOR_MODEL_URL,
     KV_CACHE_DIR,
-    ROUTER_CTX_SIZE,
-    ROUTER_GPU_LAYERS,
-    ROUTER_MODEL_URL,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,21 +94,12 @@ async def wait_until_ready(name: str, base_url: str) -> bool:
     return False
 
 
-async def start_all_and_wait(
-    router_model: str,
+async def start_executor_and_wait(
     executor_model: str,
     llama_bin: str = "llama-server",
 ) -> None:
-    """두 프로세스를 시작하고 준비될 때까지 대기한다."""
-    start_model(
-        name="router",
-        model_path=router_model,
-        base_url=ROUTER_MODEL_URL,
-        ctx_size=ROUTER_CTX_SIZE,
-        gpu_layers=ROUTER_GPU_LAYERS,
-        llama_bin=llama_bin,
-    )
-    start_model(
+    """실행기 프로세스를 시작하고 준비될 때까지 대기한다."""
+    proc = start_model(
         name="executor",
         model_path=executor_model,
         base_url=EXECUTOR_MODEL_URL,
@@ -119,18 +107,12 @@ async def start_all_and_wait(
         gpu_layers=EXECUTOR_GPU_LAYERS,
         llama_bin=llama_bin,
     )
+    if proc is None:
+        raise RuntimeError("실행기 모델 시작 실패 — 모델 파일을 확인하세요")
 
-    waiters = [
-        wait_until_ready("router", ROUTER_MODEL_URL),
-        wait_until_ready("executor", EXECUTOR_MODEL_URL),
-    ]
-
-    results = await asyncio.gather(*waiters)
-
-    if all(results):
-        logger.info("모든 모델 준비 완료 (%d개) — 요청 수신 가능", len(results))
-    else:
-        logger.warning("일부 모델 로딩 실패 — 서버는 시작되지만 오류 발생 가능")
+    ready = await wait_until_ready("executor", EXECUTOR_MODEL_URL)
+    if not ready:
+        raise RuntimeError("실행기 모델 로딩 타임아웃 — 서버를 시작할 수 없습니다")
 
 
 def stop_all() -> None:

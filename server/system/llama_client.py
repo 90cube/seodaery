@@ -48,12 +48,23 @@ async def request_completion(
         "think": False,
     }
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.post(url, json=payload)
-        resp.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+    except httpx.TimeoutException:
+        logger.error("요청 타임아웃: %s (%.0f초)", base_url, timeout)
+        raise
+    except httpx.RequestError as exc:
+        logger.error("HTTP 요청 실패: %s — %s", base_url, exc)
+        raise
 
-    data = resp.json()
-    raw = data["choices"][0]["message"]["content"]
+    try:
+        data = resp.json()
+        raw = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, ValueError) as exc:
+        logger.error("응답 구조 오류: %s — %s", exc, resp.text[:300])
+        raise RuntimeError(f"모델 응답 파싱 실패: {exc}") from exc
 
     logger.debug("raw 응답 (%d자): %.200s", len(raw), raw)
 

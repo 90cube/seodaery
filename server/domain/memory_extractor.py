@@ -1,14 +1,14 @@
-"""Reasoner 모델을 활용한 기억 추출·검색 도메인 모듈."""
+"""기억 추출·검색 도메인 모듈."""
 
 import json
 import logging
 import re
 
 from server.config.constants import (
+    EXECUTOR_MODEL_URL,
+    LIGHT_TIMEOUT_SEC,
     MEMORY_EXTRACTION_PROMPT,
     MEMORY_SEARCH_PROMPT,
-    ROUTER_MODEL_URL,
-    ROUTER_TIMEOUT_SEC,
     REGISTRATION_VALIDATION_PROMPT,
 )
 from server.system.llama_client import request_completion
@@ -52,7 +52,7 @@ def _fallback_parse_registration(text: str) -> dict | None:
 async def validate_registration(user_input: str) -> dict | None:
     """유저 등록 입력을 검증하고 구조화된 데이터를 반환한다.
 
-    1차: Reasoner 모델로 JSON 추출
+    1차: LLM으로 JSON 추출
     2차: Python 폴백 파서
     """
     # 1차: LLM 시도
@@ -62,10 +62,10 @@ async def validate_registration(user_input: str) -> dict | None:
             {"role": "user", "content": user_input},
         ]
         raw = await request_completion(
-            base_url=ROUTER_MODEL_URL,
+            base_url=EXECUTOR_MODEL_URL,
             messages=messages,
             max_tokens=100,
-            timeout=ROUTER_TIMEOUT_SEC,
+            timeout=LIGHT_TIMEOUT_SEC,
             temperature=0.0,
         )
         fragment = _extract_json_fragment(raw, "{", "}")
@@ -98,10 +98,10 @@ async def extract_memories(conversation_text: str) -> list[dict]:
     ]
 
     raw = await request_completion(
-        base_url=ROUTER_MODEL_URL,
+        base_url=EXECUTOR_MODEL_URL,
         messages=messages,
         max_tokens=500,
-        timeout=ROUTER_TIMEOUT_SEC,
+        timeout=LIGHT_TIMEOUT_SEC,
         temperature=0.0,
     )
 
@@ -122,7 +122,7 @@ async def search_relevant_memories(
     message: str,
     triples: list[dict],
 ) -> list[dict]:
-    """현재 메시지와 관련된 기억 트리플을 0.8B 모델로 필터링한다.
+    """현재 메시지와 관련된 기억 트리플을 필터링한다.
 
     Args:
         message: 사용자의 현재 메시지.
@@ -147,10 +147,10 @@ async def search_relevant_memories(
     ]
 
     raw = await request_completion(
-        base_url=ROUTER_MODEL_URL,
+        base_url=EXECUTOR_MODEL_URL,
         messages=messages,
         max_tokens=50,
-        timeout=ROUTER_TIMEOUT_SEC,
+        timeout=LIGHT_TIMEOUT_SEC,
         temperature=0.0,
     )
 

@@ -151,8 +151,8 @@ def _extract_tool_call(response: str) -> str | None:
         parsed = json.loads(match.group(0))
         if "tool" in parsed:
             return match.group(0)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as exc:
+        logger.debug("도구 JSON 파싱 실패: %s (raw: %.200s)", exc, match.group(0))
     return None
 
 

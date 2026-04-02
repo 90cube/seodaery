@@ -19,10 +19,9 @@ from server.config.constants import (
     EXECUTOR_MODEL_FILE,
     LLAMA_BIN,
     MODELS_DIR,
-    ROUTER_MODEL_FILE,
 )
 from server.domain.queue_processor import run_worker, stop_worker
-from server.system.process_manager import start_all_and_wait, stop_all
+from server.system.process_manager import start_executor_and_wait, stop_all
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,11 +48,9 @@ async def startup():
     global _worker_task
 
     models_dir = Path(MODELS_DIR)
-    router_path = str(models_dir / ROUTER_MODEL_FILE)
     executor_path = str(models_dir / EXECUTOR_MODEL_FILE)
 
-    await start_all_and_wait(
-        router_model=router_path,
+    await start_executor_and_wait(
         executor_model=executor_path,
         llama_bin=LLAMA_BIN,
     )
