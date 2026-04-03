@@ -56,7 +56,7 @@ TEST_CASES = [
 ]
 
 _TALK_PATTERN = re.compile(r"<talk>(.*?)</talk>", re.DOTALL)
-_TOOL_PATTERN = re.compile(r'\{[^{}]*"tool"\s*:.*?\}', re.DOTALL)
+_TOOL_PATTERN = re.compile(r'\{[^{}]*"tool"\s*:[^{}]*(?:\{[^{}]*\}[^{}]*)?\}', re.DOTALL)
 
 
 def parse_response(raw: str) -> dict:
@@ -90,6 +90,7 @@ async def test_one(case: dict, base_url: str) -> dict:
         "max_tokens": 512,
         "temperature": 0.3,
         "stream": False,
+        "think": True,
     }
 
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -97,7 +98,10 @@ async def test_one(case: dict, base_url: str) -> dict:
         resp.raise_for_status()
 
     data = resp.json()
-    raw = data["choices"][0]["message"]["content"]
+    msg = data["choices"][0]["message"]
+    raw = msg.get("content") or ""
+    if not raw.strip():
+        raw = msg.get("reasoning_content") or ""
     return parse_response(raw)
 
 
