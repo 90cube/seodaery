@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.api.chat import router as chat_router
+from server.api.event import router as event_router
 from server.api.websocket import router as ws_router
 from server.config.constants import (
     API_HOST,
@@ -20,7 +21,12 @@ from server.config.constants import (
     LLAMA_BIN,
     MODELS_DIR,
 )
+from server.domain.event_tool_handlers import (
+    handle_create_schedule,
+    handle_list_schedules,
+)
 from server.domain.queue_processor import run_worker, stop_worker
+from server.domain.tool_executor import register_executor
 from server.system.process_manager import start_executor_and_wait, stop_all
 
 logging.basicConfig(
@@ -38,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(chat_router)
+app.include_router(event_router)
 app.include_router(ws_router)
 
 _worker_task: asyncio.Task | None = None
@@ -54,6 +61,9 @@ async def startup():
         executor_model=executor_path,
         llama_bin=LLAMA_BIN,
     )
+
+    register_executor("create_schedule", handle_create_schedule)
+    register_executor("list_schedules", handle_list_schedules)
 
     _worker_task = asyncio.create_task(run_worker())
 

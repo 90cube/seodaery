@@ -141,6 +141,12 @@ KV_SLOT_ID = int(os.getenv("KV_SLOT_ID", "0"))
 # --- DB ---
 DB_DIR = os.getenv("DB_DIR", "db")
 
+# --- 이벤트(일정) DB ---
+EVENT_DB_NAME = "events.db"
+
+# --- 패치 일정 엑셀 저장 경로 ---
+PATCH_FILES_DIR = os.getenv("PATCH_FILES_DIR", "patch_files")
+
 # --- 기억 검색 ---
 MEMORY_SEARCH_PROMPT = (
     "Given the user message and available memory triples, "
