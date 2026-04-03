@@ -47,7 +47,7 @@ MODEL_PROFILES: dict[str, dict] = {
     "qwen": {
         "temperature": 0.7,
         "max_tokens": 2048,
-        "think_param": False,
+        "think_param": None,
         "strip_think_tags": True,
     },
     "glm": {
