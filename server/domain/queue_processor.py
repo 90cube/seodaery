@@ -33,7 +33,10 @@ from server.system.queue_store import dequeue_request, store_result
 logger = logging.getLogger(__name__)
 
 _running = False
-_TOOL_PATTERN = re.compile(r'\{[^{}]*"tool"\s*:.*?\}', re.DOTALL)
+_TALK_PATTERN = re.compile(r"<talk>(.*?)</talk>", re.DOTALL)
+_TOOL_PATTERN = re.compile(
+    r'\{[^{}]*"tool"\s*:[^{}]*(?:\{[^{}]*\}[^{}]*)?\}', re.DOTALL
+)
 _MAX_TOOL_ROUNDS = 5
 
 
@@ -89,20 +92,17 @@ async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
 
     tool_prompt = compile_tool_prompt()
     if tool_prompt:
-        system += (
-            f"\n\n{tool_prompt}"
-            '\n\n도구가 필요하면 {"tool": "id", "params": {...}} JSON을 출력하세요.'
-            "\n필요 없으면 바로 답변하세요."
-        )
+        system += f"\n\n{tool_prompt}"
 
     messages = [{"role": "system", "content": system}]
     messages.extend(session.get("messages", [])[-10:])
 
-    # 9B 응답 → 도구 호출이면 실행 후 재응답 (최대 5회)
-    content = await _generate_with_tools(messages)
+    # 응답 → <talk> 추출 + 도구 호출이면 실행 후 재응답 (최대 5회)
+    raw_content = await _generate_with_tools(messages)
+    talk = _extract_talk(raw_content)
 
-    add_message(user_id, "assistant", content)
-    return _ok(request_id, content, EXECUTOR_MODEL_NAME)
+    add_message(user_id, "assistant", talk)
+    return _ok(request_id, talk, EXECUTOR_MODEL_NAME)
 
 
 async def _generate_with_tools(messages: list[dict]) -> str:
@@ -149,8 +149,18 @@ async def _generate_with_tools(messages: list[dict]) -> str:
     )
 
 
+def _extract_talk(response: str) -> str:
+    """응답에서 <talk> 영역을 추출한다. 없으면 전체 텍스트 반환."""
+    match = _TALK_PATTERN.search(response)
+    if match:
+        return match.group(1).strip()
+    # <talk> 태그가 없으면 tool JSON을 제거하고 나머지 반환
+    cleaned = _TOOL_PATTERN.sub("", response).strip()
+    return cleaned or response.strip()
+
+
 def _extract_tool_call(response: str) -> str | None:
-    """9B 응답에서 도구 호출 JSON을 추출한다."""
+    """응답에서 도구 호출 JSON을 추출한다."""
     match = _TOOL_PATTERN.search(response)
     if match is None:
         return None
