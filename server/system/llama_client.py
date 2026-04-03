@@ -64,7 +64,14 @@ async def request_completion(
 
     try:
         data = resp.json()
-        raw = data["choices"][0]["message"]["content"]
+        msg = data["choices"][0]["message"]
+        raw = msg.get("content") or ""
+        # Qwen 사고 모드: content가 비어있으면 reasoning_content에서 가져옴
+        if not raw.strip():
+            reasoning = msg.get("reasoning_content") or ""
+            if reasoning:
+                raw = reasoning
+                logger.debug("reasoning_content에서 응답 추출 (%d자)", len(raw))
     except (KeyError, IndexError, ValueError) as exc:
         logger.error("응답 구조 오류: %s — %s", exc, resp.text[:300])
         raise RuntimeError(f"모델 응답 파싱 실패: {exc}") from exc
