@@ -32,6 +32,8 @@ async def classify(message: str) -> str:
             max_tokens=10,
             timeout=LIGHT_TIMEOUT_SEC,
             temperature=0.0,
+            think_param=False,
+            strip_think=True,
         )
         category = raw.strip().lower().split()[0]
         if category in VALID_CATEGORIES:
@@ -65,6 +67,8 @@ async def generate_chat_response(
             max_tokens=LIGHT_MAX_TOKENS,
             timeout=LIGHT_TIMEOUT_SEC,
             temperature=0.6,
+            think_param=False,
+            strip_think=True,
         )
         return raw.strip()
     except Exception as exc:
