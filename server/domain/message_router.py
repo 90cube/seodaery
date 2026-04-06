@@ -21,7 +21,27 @@ logger = logging.getLogger(__name__)
 
 VALID_CATEGORIES = {"chat", "read", "think", "tool"}
 _DEFAULT_CATEGORY = "think"
-_CATEGORY_PATTERN = re.compile(r"\b(chat|read|think|tool)\b", re.IGNORECASE)
+
+# 0.8B가 분류 단어 대신 동의어를 쓸 수 있으므로 매핑
+_SYNONYM_MAP = {
+    # chat
+    "chat": "chat", "greeting": "chat", "hello": "chat", "hi": "chat",
+    "casual": "chat", "small": "chat", "thanks": "chat", "thank": "chat",
+    "simple": "chat",
+    # read
+    "read": "read", "lookup": "read", "list": "read", "fetch": "read",
+    "search": "read", "query": "read", "show": "read", "view": "read",
+    # think
+    "think": "think", "analysis": "think", "analyze": "think",
+    "explain": "think", "complex": "think", "summarize": "think",
+    "compare": "think", "reason": "think",
+    # tool
+    "tool": "tool", "create": "tool", "register": "tool", "assign": "tool",
+    "delete": "tool", "update": "tool", "schedule": "tool", "action": "tool",
+}
+_SYNONYM_PATTERN = re.compile(
+    r"\b(" + "|".join(_SYNONYM_MAP.keys()) + r")\b", re.IGNORECASE,
+)
 
 
 async def classify(message: str) -> str:
@@ -65,11 +85,14 @@ async def _classify_raw(messages: list[dict]) -> str | None:
         content[:200], reasoning[:200],
     )
 
-    # content를 우선 검사, 없으면 reasoning에서 마지막 분류 단어를 찾음
+    # content를 우선 검사, 없으면 reasoning에서 동의어 매핑으로 분류
     for text in [content, reasoning]:
-        matches = _CATEGORY_PATTERN.findall(text)
+        matches = _SYNONYM_PATTERN.findall(text)
         if matches:
-            return matches[-1].lower()
+            last_match = matches[-1].lower()
+            category = _SYNONYM_MAP.get(last_match)
+            if category:
+                return category
     return None
 
 
