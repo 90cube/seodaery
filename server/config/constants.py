@@ -9,7 +9,7 @@ LLAMA_COMPLETION_PATH = "/v1/chat/completions"
 
 # --- 모델 식별자 ---
 EXECUTOR_MODEL_NAME = os.getenv("EXECUTOR_MODEL_NAME", "qwen3.5-9b")
-LIGHT_MODEL_NAME = os.getenv("LIGHT_MODEL_NAME", "qwen3-0.6b")
+LIGHT_MODEL_NAME = os.getenv("LIGHT_MODEL_NAME", "qwen3.5-0.8b")
 
 # --- VRAM 할당 (4070 Ti Super 16GB 기준) ---
 EXECUTOR_GPU_LAYERS = int(os.getenv("EXECUTOR_GPU_LAYERS", "99"))
@@ -24,7 +24,7 @@ API_PORT = int(os.getenv("API_PORT", "8000"))
 # --- 모델 파일 경로 ---
 MODELS_DIR = os.getenv("MODELS_DIR", "models")
 EXECUTOR_MODEL_FILE = os.getenv("EXECUTOR_MODEL_FILE", "Qwen3.5-9B-Q8_0.gguf")
-LIGHT_MODEL_FILE = os.getenv("LIGHT_MODEL_FILE", "Qwen3-0.6B-Q8_0.gguf")
+LIGHT_MODEL_FILE = os.getenv("LIGHT_MODEL_FILE", "Qwen3.5-0.8B.Q8_0.gguf")
 
 # --- llama-server 바이너리 ---
 LLAMA_BIN = os.getenv("LLAMA_BIN", "llama-server")
