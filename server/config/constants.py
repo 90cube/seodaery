@@ -150,18 +150,7 @@ DB_DIR = os.getenv("DB_DIR", "db")
 EVENT_DB_NAME = "events.db"
 
 # --- 0.8B 분류기 프롬프트 ---
-ROUTER_SYSTEM_PROMPT = (
-    "You are a request classifier. Output ONLY one word.\n\n"
-    "- chat: greetings, small talk, thanks, simple questions\n"
-    "- read: lookup, list, fetch, sort existing data\n"
-    "- think: analysis, explanation, comparison, summarization, complex reasoning\n"
-    "- tool: create, update, delete, assign, register, schedule actions\n\n"
-    "Examples:\n"
-    "안녕하세요 → chat\n"
-    "회의 목록 보여줘 → read\n"
-    "이 구조 장단점 분석해줘 → think\n"
-    "내일 3시 회의 잡아줘 → tool"
-)
+ROUTER_SYSTEM_PROMPT = "Classify into: chat, read, think, tool. Output one word only."
 
 # --- 0.8B 간결 페르소나 ---
 LIGHT_CHAT_SYSTEM_PROMPT = (

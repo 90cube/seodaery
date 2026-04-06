@@ -46,7 +46,7 @@ async def _classify_raw(messages: list[dict]) -> str | None:
     url = f"{LIGHT_MODEL_URL}{LLAMA_COMPLETION_PATH}"
     payload = {
         "messages": messages,
-        "max_tokens": 10,
+        "max_tokens": 64,
         "temperature": 0.0,
         "stream": False,
         "think": False,
@@ -59,6 +59,11 @@ async def _classify_raw(messages: list[dict]) -> str | None:
     msg = data["choices"][0]["message"]
     content = msg.get("content") or ""
     reasoning = msg.get("reasoning_content") or ""
+
+    logger.info(
+        "0.8B 원문 — content: [%s] / reasoning: [%s]",
+        content[:200], reasoning[:200],
+    )
 
     # content를 우선 검사, 없으면 reasoning에서 마지막 분류 단어를 찾음
     for text in [content, reasoning]:
