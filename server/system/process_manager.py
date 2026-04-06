@@ -14,6 +14,9 @@ from server.config.constants import (
     EXECUTOR_GPU_LAYERS,
     EXECUTOR_MODEL_URL,
     KV_CACHE_DIR,
+    LIGHT_CTX_SIZE,
+    LIGHT_GPU_LAYERS,
+    LIGHT_MODEL_URL,
 )
 
 logger = logging.getLogger(__name__)
@@ -113,6 +116,38 @@ async def start_executor_and_wait(
     ready = await wait_until_ready("executor", EXECUTOR_MODEL_URL)
     if not ready:
         raise RuntimeError("실행기 모델 로딩 타임아웃 — 서버를 시작할 수 없습니다")
+
+
+async def start_light_and_wait(
+    light_model: str,
+    llama_bin: str = "llama-server",
+) -> None:
+    """경량(0.8B) 프로세스를 시작하고 준비될 때까지 대기한다."""
+    proc = start_model(
+        name="light",
+        model_path=light_model,
+        base_url=LIGHT_MODEL_URL,
+        ctx_size=LIGHT_CTX_SIZE,
+        gpu_layers=LIGHT_GPU_LAYERS,
+        llama_bin=llama_bin,
+    )
+    if proc is None:
+        raise RuntimeError("경량 모델 시작 실패 — 모델 파일을 확인하세요")
+    ready = await wait_until_ready("light", LIGHT_MODEL_URL)
+    if not ready:
+        raise RuntimeError("경량 모델 로딩 타임아웃")
+
+
+async def start_all_models(
+    executor_model: str,
+    light_model: str,
+    llama_bin: str = "llama-server",
+) -> None:
+    """모든 모델을 병렬로 시작한다."""
+    await asyncio.gather(
+        start_executor_and_wait(executor_model, llama_bin),
+        start_light_and_wait(light_model, llama_bin),
+    )
 
 
 def stop_all() -> None:

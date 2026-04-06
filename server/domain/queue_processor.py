@@ -1,22 +1,24 @@
-"""큐 워커. 모든 대화는 9B 직답. 9B가 도구를 요청하면 Python이 실행하고 돌려준다."""
+"""큐 워커. 0.8B 분류 → 4-way 라우팅 (chat/read/think/tool)."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-import re
 
 from server.config.constants import (
     EXECUTOR_MODEL_NAME,
     EXECUTOR_MODEL_URL,
     EXECUTOR_TIMEOUT_SEC,
+    LIGHT_MODEL_NAME,
     PERSONA_SYSTEM_PROMPT,
     QUEUE_TIMEOUT_SEC,
     REGISTRATION_PROMPT,
     get_model_profile,
 )
 from server.domain.memory_extractor import validate_registration
+from server.domain.message_router import classify, generate_chat_response
+from server.domain.response_parser import extract_talk, extract_tool_call
 from server.domain.schema_compiler import compile_tool_prompt
 from server.domain.session_manager import (
     add_message,
@@ -33,10 +35,6 @@ from server.system.queue_store import dequeue_request, store_result
 logger = logging.getLogger(__name__)
 
 _running = False
-_TALK_PATTERN = re.compile(r"<talk>(.*?)</talk>", re.DOTALL)
-_TOOL_PATTERN = re.compile(
-    r'\{[^{}]*"tool"\s*:[^{}]*(?:\{[^{}]*\}[^{}]*)?\}', re.DOTALL
-)
 _MAX_TOOL_ROUNDS = 5
 
 
@@ -78,17 +76,39 @@ async def _handle_new_user(request_id: str, user_id: str, message: str) -> dict:
 
 
 async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
-    """모든 대화 → 9B. 9B가 도구를 요청하면 실행 후 돌려준다."""
+    """0.8B 분류 → 4-way 라우팅: chat / read / think / tool."""
     session = get_session(user_id)
     if not session:
         session = start_session(user_id)
     add_message(user_id, "user", message)
 
-    # 시스템 프롬프트: 페르소나 + 유저 정보 + (도구가 있으면) 도구 목록
+    category = await classify(message)
+
+    if category == "chat":
+        return await _route_chat(request_id, user_id, session)
+    return await _route_executor(request_id, user_id, session, category)
+
+
+async def _route_chat(request_id: str, user_id: str, session: dict) -> dict:
+    """chat → 0.8B 즉답."""
+    user_info = session.get("user")
+    message = session["messages"][-1]["content"]
+    reply = await generate_chat_response(message, user_info)
+    add_message(user_id, "assistant", reply)
+    return _ok(request_id, reply, LIGHT_MODEL_NAME)
+
+
+async def _route_executor(
+    request_id: str, user_id: str, session: dict, category: str,
+) -> dict:
+    """read/think/tool → 9B. category에 따라 think on/off."""
     system = PERSONA_SYSTEM_PROMPT
     user_info = session.get("user")
     if user_info:
-        system += f"\n대화 상대: {user_info.get('name', '?')} ({user_info.get('position', '')}, {user_info.get('role', '')})"
+        system += (
+            f"\n대화 상대: {user_info.get('name', '?')}"
+            f" ({user_info.get('position', '')}, {user_info.get('role', '')})"
+        )
 
     tool_prompt = compile_tool_prompt()
     if tool_prompt:
@@ -97,17 +117,20 @@ async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
     messages = [{"role": "system", "content": system}]
     messages.extend(session.get("messages", [])[-10:])
 
-    # 응답 → <talk> 추출 + 도구 호출이면 실행 후 재응답 (최대 5회)
-    raw_content = await _generate_with_tools(messages)
-    talk = _extract_talk(raw_content)
+    use_think = category != "read"
+    raw_content = await _generate_with_tools(messages, use_think=use_think)
+    talk = extract_talk(raw_content)
 
     add_message(user_id, "assistant", talk)
     return _ok(request_id, talk, EXECUTOR_MODEL_NAME)
 
 
-async def _generate_with_tools(messages: list[dict]) -> str:
+async def _generate_with_tools(
+    messages: list[dict], use_think: bool = True,
+) -> str:
     """응답을 생성하고, 도구 호출이 있으면 실행 후 재생성한다."""
     profile = get_model_profile()
+    think_param = profile["think_param"] if use_think else False
     for round_num in range(1, _MAX_TOOL_ROUNDS + 1):
         response = await request_completion(
             base_url=EXECUTOR_MODEL_URL,
@@ -115,12 +138,12 @@ async def _generate_with_tools(messages: list[dict]) -> str:
             max_tokens=profile["max_tokens"],
             timeout=EXECUTOR_TIMEOUT_SEC,
             temperature=profile["temperature"],
-            think_param=profile["think_param"],
+            think_param=think_param,
             strip_think=profile["strip_think_tags"],
         )
 
         # 도구 호출 JSON 감지
-        tool_json = _extract_tool_call(response)
+        tool_json = extract_tool_call(response)
         if tool_json is None:
             return response  # 도구 없음 → 최종 응답
 
@@ -144,33 +167,9 @@ async def _generate_with_tools(messages: list[dict]) -> str:
         max_tokens=profile["max_tokens"],
         timeout=EXECUTOR_TIMEOUT_SEC,
         temperature=profile["temperature"],
-        think_param=profile["think_param"],
+        think_param=think_param,
         strip_think=profile["strip_think_tags"],
     )
-
-
-def _extract_talk(response: str) -> str:
-    """응답에서 <talk> 영역을 추출한다. 없으면 전체 텍스트 반환."""
-    match = _TALK_PATTERN.search(response)
-    if match:
-        return match.group(1).strip()
-    # <talk> 태그가 없으면 tool JSON을 제거하고 나머지 반환
-    cleaned = _TOOL_PATTERN.sub("", response).strip()
-    return cleaned or response.strip()
-
-
-def _extract_tool_call(response: str) -> str | None:
-    """응답에서 도구 호출 JSON을 추출한다."""
-    match = _TOOL_PATTERN.search(response)
-    if match is None:
-        return None
-    try:
-        parsed = json.loads(match.group(0))
-        if "tool" in parsed:
-            return match.group(0)
-    except json.JSONDecodeError as exc:
-        logger.debug("도구 JSON 파싱 실패: %s (raw: %.200s)", exc, match.group(0))
-    return None
 
 
 def _ok(rid: str, content: str, model: str) -> dict:

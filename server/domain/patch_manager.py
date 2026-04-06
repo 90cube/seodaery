@@ -38,7 +38,6 @@ def register_patch(
     modeling_start_date: str | None = None,
     modeling_done_date: str | None = None,
     extra_info: dict | None = None,
-    file_path: str | None = None,
 ) -> str:
     """패치 일정을 등록하고 patch_id를 반환한다."""
     patch_id = uuid.uuid4().hex[:12]
@@ -54,7 +53,6 @@ def register_patch(
             modeling_start_date=modeling_start_date,
             modeling_done_date=modeling_done_date,
             extra_info=extra_info or {},
-            file_path=file_path,
         )
     finally:
         conn.close()

@@ -4,14 +4,18 @@ import os
 
 # --- llama.cpp 서버 엔드포인트 ---
 EXECUTOR_MODEL_URL = os.getenv("EXECUTOR_MODEL_URL", "http://localhost:8082")
+LIGHT_MODEL_URL = os.getenv("LIGHT_MODEL_URL", "http://localhost:8081")
 LLAMA_COMPLETION_PATH = "/v1/chat/completions"
 
 # --- 모델 식별자 ---
 EXECUTOR_MODEL_NAME = os.getenv("EXECUTOR_MODEL_NAME", "qwen3.5-9b")
+LIGHT_MODEL_NAME = os.getenv("LIGHT_MODEL_NAME", "qwen3-0.6b")
 
 # --- VRAM 할당 (4070 Ti Super 16GB 기준) ---
 EXECUTOR_GPU_LAYERS = int(os.getenv("EXECUTOR_GPU_LAYERS", "99"))
 EXECUTOR_CTX_SIZE = int(os.getenv("EXECUTOR_CTX_SIZE", "8192"))
+LIGHT_GPU_LAYERS = int(os.getenv("LIGHT_GPU_LAYERS", "99"))
+LIGHT_CTX_SIZE = int(os.getenv("LIGHT_CTX_SIZE", "2048"))
 
 # --- FastAPI ---
 API_HOST = os.getenv("API_HOST", "127.0.0.1")
@@ -20,6 +24,7 @@ API_PORT = int(os.getenv("API_PORT", "8000"))
 # --- 모델 파일 경로 ---
 MODELS_DIR = os.getenv("MODELS_DIR", "models")
 EXECUTOR_MODEL_FILE = os.getenv("EXECUTOR_MODEL_FILE", "Qwen3.5-9B-Q8_0.gguf")
+LIGHT_MODEL_FILE = os.getenv("LIGHT_MODEL_FILE", "Qwen3-0.6B-Q8_0.gguf")
 
 # --- llama-server 바이너리 ---
 LLAMA_BIN = os.getenv("LLAMA_BIN", "llama-server")
@@ -144,8 +149,26 @@ DB_DIR = os.getenv("DB_DIR", "db")
 # --- 이벤트(일정) DB ---
 EVENT_DB_NAME = "events.db"
 
-# --- 패치 일정 엑셀 저장 경로 ---
-PATCH_FILES_DIR = os.getenv("PATCH_FILES_DIR", "patch_files")
+# --- 0.8B 분류기 프롬프트 ---
+ROUTER_SYSTEM_PROMPT = (
+    "You are a request classifier. Output ONLY one word.\n\n"
+    "- chat: greetings, small talk, thanks, simple questions\n"
+    "- read: lookup, list, fetch, sort existing data\n"
+    "- think: analysis, explanation, comparison, summarization, complex reasoning\n"
+    "- tool: create, update, delete, assign, register, schedule actions\n\n"
+    "Examples:\n"
+    "안녕하세요 → chat\n"
+    "회의 목록 보여줘 → read\n"
+    "이 구조 장단점 분석해줘 → think\n"
+    "내일 3시 회의 잡아줘 → tool"
+)
+
+# --- 0.8B 간결 페르소나 ---
+LIGHT_CHAT_SYSTEM_PROMPT = (
+    "당신은 '서대리' AI 어시스턴트. "
+    f"본명은 {PERSONA_NAME}. "
+    "센스있고 쾌활한 톤, 한국어, 1~2문장 간결 답변."
+)
 
 # --- 기억 검색 ---
 MEMORY_SEARCH_PROMPT = (

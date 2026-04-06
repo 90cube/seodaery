@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS patch_schedules (
     modeling_start_date   TEXT,
     modeling_done_date    TEXT,
     extra_info    TEXT DEFAULT '{}',
-    file_path     TEXT,
     created_by    TEXT NOT NULL,
     created_at    REAL,
     updated_at    REAL
@@ -68,8 +67,8 @@ def create_patch(conn: sqlite3.Connection, patch_id: str, **kw) -> None:
            (patch_id, title, patch_date, description,
             art_share_date, concept_share_date,
             illustration_done_date, modeling_start_date, modeling_done_date,
-            extra_info, file_path, created_by, created_at, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            extra_info, created_by, created_at, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             patch_id,
             kw["title"], kw["patch_date"], kw.get("description", ""),
@@ -77,7 +76,7 @@ def create_patch(conn: sqlite3.Connection, patch_id: str, **kw) -> None:
             kw.get("illustration_done_date"),
             kw.get("modeling_start_date"), kw.get("modeling_done_date"),
             json.dumps(kw.get("extra_info", {}), ensure_ascii=False),
-            kw.get("file_path"), kw["created_by"], now, now,
+            kw["created_by"], now, now,
         ),
     )
     conn.commit()

@@ -66,7 +66,6 @@ def _create_patch(p: dict) -> dict:
         modeling_start_date=p.get("modeling_start_date"),
         modeling_done_date=p.get("modeling_done_date"),
         extra_info=p.get("extra_info"),
-        file_path=p.get("file_path"),
     )
     return {"success": True, "patch_id": pid}
 
