@@ -50,7 +50,6 @@ async def create_patch(body: dict, x_user_id: str = Header(default="anonymous"))
         modeling_start_date=body.get("modeling_start_date"),
         modeling_done_date=body.get("modeling_done_date"),
         extra_info=body.get("extra_info"),
-        extra_info=body.get("extra_info"),
     )
     return {"patch_id": pid}
 
