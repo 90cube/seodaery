@@ -24,16 +24,11 @@ _DEFAULT_CATEGORY = "think"
 
 # 0.8B가 분류 단어 대신 동의어를 쓸 수 있으므로 매핑
 # "think" 제외 — <think> 태그 잔여물에 매칭되는 것 방지
+# 분류 결과 직접 매칭용 — 사고과정에 흔히 나오는 일반 영단어 제외
 _SYNONYM_MAP = {
-    "chat": "chat", "greeting": "chat", "hello": "chat", "hi": "chat",
-    "casual": "chat", "thanks": "chat", "thank": "chat",
-    "read": "read", "lookup": "read", "list": "read", "fetch": "read",
-    "search": "read", "query": "read", "show": "read", "view": "read",
-    "analysis": "think", "analyze": "think",
-    "explain": "think", "summarize": "think",
-    "compare": "think", "reason": "think", "reasoning": "think",
-    "tool": "tool", "create": "tool", "register": "tool", "assign": "tool",
-    "delete": "tool", "update": "tool", "schedule": "tool", "action": "tool",
+    "chat": "chat", "greeting": "chat",
+    "read": "read",
+    "tool": "tool",
 }
 _SYNONYM_PATTERN = re.compile(
     r"\b(" + "|".join(_SYNONYM_MAP.keys()) + r")\b", re.IGNORECASE,
@@ -42,11 +37,15 @@ _SYNONYM_PATTERN = re.compile(
 
 def _strip_think(text: str) -> str:
     """<think>...</think> 제거 후 실제 답변만 반환."""
+    # 1. 완전한 <think>...</think> 쌍 제거
     cleaned = _THINK_RE.sub("", text).strip()
-    if cleaned:
+    if cleaned and cleaned != text.strip():
         return cleaned
+    # 2. </think> 이후 텍스트 추출
     if "</think>" in text:
         return text.split("</think>", 1)[1].strip()
+    # 3. <think>만 있고 닫히지 않은 경우 — 사고 중간에 잘림
+    #    태그만 제거하고 사고과정 텍스트 반환 (분류 힌트용)
     return re.sub(r"</?think>", "", text).strip()
 
 
@@ -82,11 +81,22 @@ async def _classify_raw(message: str) -> str | None:
 
     raw = resp.json().get("content", "")
     cleaned = _strip_think(raw)
-    logger.info("0.8B 원문: [%s] → 정제: [%s]", raw[:100], cleaned[:100])
+    logger.info("0.8B 원문: [%s] → 정제: [%s]", raw[:120], cleaned[:120])
 
+    # 정제된 텍스트에서 4대 카테고리 직접 검색 (마지막 매칭 우선)
     matches = _SYNONYM_PATTERN.findall(cleaned)
     if matches:
         return _SYNONYM_MAP.get(matches[-1].lower())
+
+    # 사고과정 텍스트에서 최종 결론 추출 시도
+    # "→ chat", "answer: chat", "classification: tool" 등
+    cat_match = re.search(
+        r"(?:→|->|:|category|classification|answer)\s*(chat|read|think|tool)",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if cat_match:
+        return cat_match.group(1).lower()
     return None
 
 
