@@ -17,23 +17,21 @@ from server.config.constants import (
 
 logger = logging.getLogger(__name__)
 
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+
 VALID_CATEGORIES = {"chat", "read", "think", "tool"}
 _DEFAULT_CATEGORY = "think"
 
 # 0.8B가 분류 단어 대신 동의어를 쓸 수 있으므로 매핑
+# "think" 제외 — <think> 태그 잔여물에 매칭되는 것 방지
 _SYNONYM_MAP = {
-    # chat
     "chat": "chat", "greeting": "chat", "hello": "chat", "hi": "chat",
-    "casual": "chat", "small": "chat", "thanks": "chat", "thank": "chat",
-    "simple": "chat",
-    # read
+    "casual": "chat", "thanks": "chat", "thank": "chat",
     "read": "read", "lookup": "read", "list": "read", "fetch": "read",
     "search": "read", "query": "read", "show": "read", "view": "read",
-    # think
-    "think": "think", "analysis": "think", "analyze": "think",
-    "explain": "think", "complex": "think", "summarize": "think",
-    "compare": "think", "reason": "think",
-    # tool
+    "analysis": "think", "analyze": "think",
+    "explain": "think", "summarize": "think",
+    "compare": "think", "reason": "think", "reasoning": "think",
     "tool": "tool", "create": "tool", "register": "tool", "assign": "tool",
     "delete": "tool", "update": "tool", "schedule": "tool", "action": "tool",
 }
@@ -42,14 +40,20 @@ _SYNONYM_PATTERN = re.compile(
 )
 
 
+def _strip_think(text: str) -> str:
+    """<think>...</think> 제거 후 실제 답변만 반환."""
+    cleaned = _THINK_RE.sub("", text).strip()
+    if cleaned:
+        return cleaned
+    if "</think>" in text:
+        return text.split("</think>", 1)[1].strip()
+    return re.sub(r"</?think>", "", text).strip()
+
+
 async def classify(message: str) -> str:
     """사용자 메시지를 0.8B로 분류한다. chat/read/think/tool 중 하나 반환."""
-    messages = [
-        {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
-        {"role": "user", "content": message},
-    ]
     try:
-        category = await _classify_raw(messages)
+        category = await _classify_raw(message)
         if category:
             logger.info("분류: '%s' → %s", message[:30], category)
             return category
@@ -59,32 +63,30 @@ async def classify(message: str) -> str:
     return _DEFAULT_CATEGORY
 
 
-async def _classify_raw(messages: list[dict]) -> str | None:
-    """0.8B /completion 엔드포인트로 순수 텍스트 분류."""
-    # chat completions의 think 모드를 우회하기 위해 /completion 사용
-    system = messages[0]["content"]
-    user_msg = messages[1]["content"]
-    prompt = f"<|system|>\n{system}\n<|user|>\n{user_msg}\n<|assistant|>\n"
-
+async def _classify_raw(message: str) -> str | None:
+    """0.8B /completion으로 분류. think 태그 제거 후 키워드 매칭."""
+    prompt = (
+        f"<|system|>\n{ROUTER_SYSTEM_PROMPT}\n"
+        f"<|user|>\n{message}\n<|assistant|>\n"
+    )
     url = f"{LIGHT_MODEL_URL}/completion"
     payload = {
         "prompt": prompt,
-        "n_predict": 16,
+        "n_predict": 256,
         "temperature": 0.0,
-        "stop": ["\n", "<|", "</s>"],
+        "stop": ["<|", "</s>"],
     }
     async with httpx.AsyncClient(timeout=LIGHT_TIMEOUT_SEC) as client:
         resp = await client.post(url, json=payload)
         resp.raise_for_status()
 
-    data = resp.json()
-    content = data.get("content", "")
-    logger.info("0.8B 원문: [%s]", content.strip())
+    raw = resp.json().get("content", "")
+    cleaned = _strip_think(raw)
+    logger.info("0.8B 원문: [%s] → 정제: [%s]", raw[:100], cleaned[:100])
 
-    matches = _SYNONYM_PATTERN.findall(content)
+    matches = _SYNONYM_PATTERN.findall(cleaned)
     if matches:
-        last_match = matches[-1].lower()
-        return _SYNONYM_MAP.get(last_match)
+        return _SYNONYM_MAP.get(matches[-1].lower())
     return None
 
 
@@ -105,14 +107,14 @@ async def generate_chat_response(
         "prompt": prompt,
         "n_predict": LIGHT_MAX_TOKENS,
         "temperature": 0.6,
-        "stop": ["<|", "</s>", "<|end|>"],
+        "stop": ["<|", "</s>"],
     }
     try:
         async with httpx.AsyncClient(timeout=LIGHT_TIMEOUT_SEC) as client:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
-        data = resp.json()
-        result = data.get("content", "").strip()
+        raw = resp.json().get("content", "")
+        result = _strip_think(raw)
         logger.info("0.8B 채팅 응답: [%s]", result[:100])
         return result or "안녕하세요! 서대리입니다."
     except Exception as exc:

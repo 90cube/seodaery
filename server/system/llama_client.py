@@ -73,10 +73,15 @@ async def request_completion(
             len(raw), len(reasoning),
         )
 
-        # content가 비어있으면 reasoning_content에서 가져옴
+        # content가 비어있으면 reasoning_content에서 답변 추출 시도
         if not raw.strip() and reasoning:
-            raw = reasoning
-            logger.info("content 비어있음 → reasoning_content에서 추출")
+            if strip_think:
+                # reasoning에서 사고과정을 제거하고 실제 답변만 추출
+                raw = _strip_think_tags(reasoning)
+                logger.info("content 비어있음 → reasoning에서 답변 추출 (%d자)", len(raw))
+            else:
+                raw = reasoning
+                logger.info("content 비어있음 → reasoning_content에서 추출")
     except (KeyError, IndexError, ValueError) as exc:
         logger.error("응답 구조 오류: %s — %s", exc, resp.text[:300])
         raise RuntimeError(f"모델 응답 파싱 실패: {exc}") from exc
