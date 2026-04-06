@@ -12,7 +12,6 @@ from server.config.constants import (
     LIGHT_MAX_TOKENS,
     LIGHT_MODEL_URL,
     LIGHT_TIMEOUT_SEC,
-    LLAMA_COMPLETION_PATH,
     ROUTER_SYSTEM_PROMPT,
 )
 from server.system.llama_client import request_completion
@@ -62,37 +61,31 @@ async def classify(message: str) -> str:
 
 
 async def _classify_raw(messages: list[dict]) -> str | None:
-    """0.8B API를 직접 호출하여 content + reasoning 모두에서 분류 단어를 찾는다."""
-    url = f"{LIGHT_MODEL_URL}{LLAMA_COMPLETION_PATH}"
+    """0.8B /completion 엔드포인트로 순수 텍스트 분류."""
+    # chat completions의 think 모드를 우회하기 위해 /completion 사용
+    system = messages[0]["content"]
+    user_msg = messages[1]["content"]
+    prompt = f"<|system|>\n{system}\n<|user|>\n{user_msg}\n<|assistant|>\n"
+
+    url = f"{LIGHT_MODEL_URL}/completion"
     payload = {
-        "messages": messages,
-        "max_tokens": 64,
+        "prompt": prompt,
+        "n_predict": 16,
         "temperature": 0.0,
-        "stream": False,
-        "think": False,
+        "stop": ["\n", "<|", "</s>"],
     }
     async with httpx.AsyncClient(timeout=LIGHT_TIMEOUT_SEC) as client:
         resp = await client.post(url, json=payload)
         resp.raise_for_status()
 
     data = resp.json()
-    msg = data["choices"][0]["message"]
-    content = msg.get("content") or ""
-    reasoning = msg.get("reasoning_content") or ""
+    content = data.get("content", "")
+    logger.info("0.8B 원문: [%s]", content.strip())
 
-    logger.info(
-        "0.8B 원문 — content: [%s] / reasoning: [%s]",
-        content[:200], reasoning[:200],
-    )
-
-    # content를 우선 검사, 없으면 reasoning에서 동의어 매핑으로 분류
-    for text in [content, reasoning]:
-        matches = _SYNONYM_PATTERN.findall(text)
-        if matches:
-            last_match = matches[-1].lower()
-            category = _SYNONYM_MAP.get(last_match)
-            if category:
-                return category
+    matches = _SYNONYM_PATTERN.findall(content)
+    if matches:
+        last_match = matches[-1].lower()
+        return _SYNONYM_MAP.get(last_match)
     return None
 
 
