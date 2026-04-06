@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import logging
+import re
+
+import httpx
 
 from server.config.constants import (
     LIGHT_CHAT_SYSTEM_PROMPT,
     LIGHT_MAX_TOKENS,
     LIGHT_MODEL_URL,
     LIGHT_TIMEOUT_SEC,
+    LLAMA_COMPLETION_PATH,
     ROUTER_SYSTEM_PROMPT,
 )
 from server.system.llama_client import request_completion
@@ -17,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 VALID_CATEGORIES = {"chat", "read", "think", "tool"}
 _DEFAULT_CATEGORY = "think"
+_CATEGORY_PATTERN = re.compile(r"\b(chat|read|think|tool)\b", re.IGNORECASE)
 
 
 async def classify(message: str) -> str:
@@ -26,23 +31,41 @@ async def classify(message: str) -> str:
         {"role": "user", "content": message},
     ]
     try:
-        raw = await request_completion(
-            base_url=LIGHT_MODEL_URL,
-            messages=messages,
-            max_tokens=10,
-            timeout=LIGHT_TIMEOUT_SEC,
-            temperature=0.0,
-            think_param=False,
-            strip_think=True,
-        )
-        category = raw.strip().lower().split()[0]
-        if category in VALID_CATEGORIES:
+        category = await _classify_raw(messages)
+        if category:
             logger.info("분류: '%s' → %s", message[:30], category)
             return category
-        logger.warning("분류 실패 (무효 카테고리: %s) → %s", raw, _DEFAULT_CATEGORY)
+        logger.warning("분류 실패 → %s", _DEFAULT_CATEGORY)
     except Exception as exc:
         logger.warning("분류 오류: %s → %s", exc, _DEFAULT_CATEGORY)
     return _DEFAULT_CATEGORY
+
+
+async def _classify_raw(messages: list[dict]) -> str | None:
+    """0.8B API를 직접 호출하여 content + reasoning 모두에서 분류 단어를 찾는다."""
+    url = f"{LIGHT_MODEL_URL}{LLAMA_COMPLETION_PATH}"
+    payload = {
+        "messages": messages,
+        "max_tokens": 10,
+        "temperature": 0.0,
+        "stream": False,
+        "think": False,
+    }
+    async with httpx.AsyncClient(timeout=LIGHT_TIMEOUT_SEC) as client:
+        resp = await client.post(url, json=payload)
+        resp.raise_for_status()
+
+    data = resp.json()
+    msg = data["choices"][0]["message"]
+    content = msg.get("content") or ""
+    reasoning = msg.get("reasoning_content") or ""
+
+    # content를 우선 검사, 없으면 reasoning에서 마지막 분류 단어를 찾음
+    for text in [content, reasoning]:
+        matches = _CATEGORY_PATTERN.findall(text)
+        if matches:
+            return matches[-1].lower()
+    return None
 
 
 async def generate_chat_response(
