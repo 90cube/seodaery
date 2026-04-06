@@ -14,7 +14,6 @@ from server.config.constants import (
     LIGHT_TIMEOUT_SEC,
     ROUTER_SYSTEM_PROMPT,
 )
-from server.system.llama_client import request_completion
 
 logger = logging.getLogger(__name__)
 
@@ -93,28 +92,29 @@ async def generate_chat_response(
     message: str,
     user_info: dict | None = None,
 ) -> str:
-    """0.8B로 간단한 채팅 응답을 생성한다."""
+    """0.8B /completion으로 간단한 채팅 응답을 생성한다."""
     system = LIGHT_CHAT_SYSTEM_PROMPT
     if user_info:
         name = user_info.get("name", "")
         if name:
             system += f"\n대화 상대: {name}"
 
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": message},
-    ]
+    prompt = f"<|system|>\n{system}\n<|user|>\n{message}\n<|assistant|>\n"
+    url = f"{LIGHT_MODEL_URL}/completion"
+    payload = {
+        "prompt": prompt,
+        "n_predict": LIGHT_MAX_TOKENS,
+        "temperature": 0.6,
+        "stop": ["<|", "</s>", "<|end|>"],
+    }
     try:
-        raw = await request_completion(
-            base_url=LIGHT_MODEL_URL,
-            messages=messages,
-            max_tokens=LIGHT_MAX_TOKENS,
-            timeout=LIGHT_TIMEOUT_SEC,
-            temperature=0.6,
-            think_param=False,
-            strip_think=True,
-        )
-        return raw.strip()
+        async with httpx.AsyncClient(timeout=LIGHT_TIMEOUT_SEC) as client:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+        data = resp.json()
+        result = data.get("content", "").strip()
+        logger.info("0.8B 채팅 응답: [%s]", result[:100])
+        return result or "안녕하세요! 서대리입니다."
     except Exception as exc:
         logger.error("0.8B 채팅 응답 실패: %s", exc)
         return "죄송합니다, 잠시 후 다시 시도해주세요."
