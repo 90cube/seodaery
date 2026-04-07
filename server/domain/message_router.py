@@ -32,7 +32,7 @@ _GREETING = re.compile(
 )
 
 
-_CLASSIFIER_SYSTEM = "분류: chat, read, think, tool 중 하나. <result>chat</result> 형식으로만 답하세요."
+_CLASSIFIER_SYSTEM = "<user input> 안의 메시지를 chat, read, think, tool 중 하나로 분류. <result></result> 안에 답."
 
 _RESULT_RE = re.compile(r"<result>\s*(chat|read|think|tool)\s*</result>", re.IGNORECASE)
 _CATEGORY_RE = re.compile(r"\b(chat|read|think|tool)\b", re.IGNORECASE)
