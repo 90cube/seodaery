@@ -211,7 +211,12 @@ async function pollResult(rid){
       const model = d.model_used||'?';
       const content = d.content||'(응답 없음)';
       addMsg('bot', content, model);
-      onResponse(d);
+      // 모델 기준으로 패널 업데이트
+      if(model.includes('0.8b')||model.includes('light')){
+        setMP('08b','on');setMP('9b','off');
+      }else{
+        setMP('08b','on');setMP('9b','on');
+      }
       if(pending.size===0) unlock();
     }
   }catch(e){}
@@ -318,16 +323,8 @@ async function runChat(msg){
     setMP('9b','off');
     flog('0.8B classifying...','fl-step');
 
-    // Fire trace + chat in parallel
-    const [traceData, chatData] = await Promise.all([
-      fetch(API+'/api/debug/trace',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':userId},body:JSON.stringify({message:msg})}).then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch(API+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':userId},body:JSON.stringify({message:msg})}).then(r=>r.json())
-    ]);
-
-    // Show trace info in debug panel
-    if(traceData){
-      showTraceSteps(traceData, msg);
-    }
+    // chat만 보냄 (trace 동시 호출하면 0.8B 슬롯 충돌)
+    const chatData = await fetch(API+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':userId},body:JSON.stringify({message:msg})}).then(r=>r.json());
 
     // Handle chat queue
     if(chatData.duplicate){
@@ -340,35 +337,21 @@ async function runChat(msg){
     }
 
     const rid=chatData.request_id;
-    const cat=traceData?traceData.category:'?';
 
     setP('classify',false);
-    setP('route',true);
-    setBadge('route:'+cat, catColor(cat));
-    flog('category: '+cat,'fl-'+(cat==='chat'?'chat':'exec'));
-
-    if(cat==='chat'){
-      setMP('08b','work');setMP('9b','off');
-      setMB('9b','category=chat -> disabled');
-    }else{
-      setMP('08b','on');setMP('9b','work');
-      setMB('08b','classified: '+cat);
-    }
-
-    setP('route',false);
     setP('generate',true);
-    setBadge('generating','#534AB7');
+    setBadge('waiting...','#534AB7');
+    setMP('08b','work');
     flog('waiting for response...','fl-step');
 
     // Poll for result
-    pending.set(rid, {msg,cat});
+    pending.set(rid, {msg});
     const poll=setInterval(async()=>{
       await pollResult(rid);
       if(!pending.has(rid)){
         clearInterval(poll);
         setP('generate',false);setP('done',true);
         setBadge('done','#0F6E56');
-        if(cat==='chat'){setMP('08b','on')}else{setMP('9b','on')}
         flog('response received','fl-chat');
         setTimeout(()=>{clearP();setBadge('online','#1D9E75')},2000);
       }
@@ -457,10 +440,7 @@ function showTraceSteps(data, msg){
 }
 
 /* ── Response handler for chat mode ── */
-function onResponse(d){
-  const cat = [...pending.values()].find(v=>true)?.cat || '?';
-  flog('model: '+(d.model_used||'?'),'fl-chat');
-}
+
 
 function catColor(c){return{chat:'#1D9E75',read:'#378ADD',think:'#BA7517',tool:'#B54EA0'}[c]||'#555'}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
