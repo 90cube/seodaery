@@ -33,19 +33,20 @@ _GREETING = re.compile(
 
 
 _CLASSIFIER_SYSTEM = (
-    "You are a message classifier. "
-    "Classify the user message into exactly one category.\n"
-    "Categories:\n"
-    "- chat: greetings, casual talk, thanks, simple questions\n"
-    "- read: asking to look up, list, or check information\n"
-    "- think: complex questions needing analysis or explanation\n"
-    "- tool: requests to create, delete, modify, or schedule something\n\n"
-    "IMPORTANT: If the previous assistant message asked a yes/no question "
-    "(e.g. 'shall I do X?'), and the user confirms (e.g. 'ㅇㅇ', '응', "
-    "'네'), classify based on what was asked, NOT as chat.\n\n"
-    "Reply with ONLY the category name. No explanation."
+    "<user input></user input> 태그 안의 메시지를 분류하세요.\n\n"
+    "카테고리:\n"
+    "- chat: 인사, 잡담, 감사, 단순 대화\n"
+    "- read: 정보 조회, 목록 확인, 검색 요청\n"
+    "- think: 분석, 설명, 비교 등 복잡한 질문\n"
+    "- tool: 생성, 삭제, 수정, 예약 등 실행 요청\n\n"
+    "중요: 이전 assistant 메시지가 확인 질문(예: '등록할까요?')이고 "
+    "사용자가 확인(예: 'ㅇㅇ', '응', '네')하면, "
+    "질문의 원래 의도에 맞는 카테고리로 분류하세요.\n\n"
+    "반드시 아래 형식으로만 응답하세요:\n"
+    "<result>카테고리</result>"
 )
 
+_RESULT_RE = re.compile(r"<result>\s*(chat|read|think|tool)\s*</result>", re.IGNORECASE)
 _CATEGORY_RE = re.compile(r"\b(chat|read|think|tool)\b", re.IGNORECASE)
 
 
@@ -89,7 +90,10 @@ async def _classify_llm(
     if prev_assistant:
         messages.append({"role": "assistant", "content": prev_assistant})
 
-    messages.append({"role": "user", "content": message})
+    messages.append({
+        "role": "user",
+        "content": f"<user input>{message}</user input>",
+    })
 
     url = f"{LIGHT_MODEL_URL}{LLAMA_COMPLETION_PATH}"
     payload = {
@@ -111,6 +115,12 @@ async def _classify_llm(
     cleaned = _strip_think(raw) if "<think>" in raw else raw
     logger.info("LLM 분류 원문: [%s] → 정제: [%s]", raw[:80], cleaned[:80])
 
+    # 1차: <result>카테고리</result> 형식
+    rm = _RESULT_RE.search(cleaned)
+    if rm:
+        return rm.group(1).lower()
+
+    # 2차: 폴백 — 텍스트에서 카테고리 단어 직접 검색
     match = _CATEGORY_RE.search(cleaned)
     if match:
         return match.group(1).lower()
