@@ -39,7 +39,7 @@ if exist "server\.venv" (
 
 :: -- 4. 의존성 설치 --
 echo.
-echo [4/4] 패키지 설치...
+echo [4/5] 패키지 설치...
 call server\.venv\Scripts\activate.bat
 pip install -r server\requirements.txt --quiet
 if %errorlevel% neq 0 (
@@ -47,6 +47,12 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+echo       설치 완료
+
+:: -- 5. Brain Map 데스크톱 앱 --
+echo.
+echo [5/5] Brain Map 데스크톱 앱 설치...
+pip install pywebview --quiet
 echo       설치 완료
 
 :: -- 완료 --
