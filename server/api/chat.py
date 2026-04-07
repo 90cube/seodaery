@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse
 
@@ -14,9 +12,6 @@ from server.model.schemas import ChatRequest, RequestStatus
 from server.system.queue_store import enqueue_request, get_queue_length, get_result
 
 router = APIRouter(prefix="/api", tags=["chat"])
-
-_SYNC_POLL_INTERVAL = 0.5
-_SYNC_TIMEOUT = 120.0
 
 
 @router.post("/chat")
@@ -53,39 +48,6 @@ async def get_chat_result(request_id: str):
             "pending_count": queue_len,
         }
     return result
-
-
-@router.post("/chat/sync")
-async def chat_sync(body: dict, x_user_id: str = Header(default="n8n")):
-    """동기 채팅. 큐에 넣고 결과 나올 때까지 대기 후 반환한다.
-
-    n8n 등 외부 자동화 도구용. HTTP Request 노드 하나로 사용 가능.
-    """
-    message = body.get("message", "")
-    if not message:
-        return JSONResponse(status_code=400, content={"error": "message is required"})
-
-    req = ChatRequest(message=message)
-    queue_len = await enqueue_request(
-        req.request_id, req.message, user_id=x_user_id,
-    )
-    if queue_len is None:
-        return JSONResponse(status_code=409, content={"error": "duplicate request"})
-
-    elapsed = 0.0
-    while elapsed < _SYNC_TIMEOUT:
-        result = get_result(req.request_id)
-        if result is not None:
-            return {
-                "content": result.get("content", ""),
-                "model_used": result.get("model_used", ""),
-                "status": result.get("status", ""),
-                "request_id": req.request_id,
-            }
-        await asyncio.sleep(_SYNC_POLL_INTERVAL)
-        elapsed += _SYNC_POLL_INTERVAL
-
-    return JSONResponse(status_code=504, content={"error": "timeout"})
 
 
 @router.get("/queue/status")
