@@ -6,8 +6,6 @@ import time
 import traceback
 import urllib.request
 
-import webview
-
 SERVER = "http://localhost:8000"
 TITLE = "서대리"
 WIDTH = 1000
@@ -21,7 +19,7 @@ def _msgbox(title: str, text: str) -> None:
 
 def _wait_for_server(server: str, timeout: int = 30) -> bool:
     """서버가 준비될 때까지 대기한다."""
-    for i in range(timeout):
+    for _ in range(timeout):
         try:
             urllib.request.urlopen(f"{server}/api/queue/status", timeout=2)
             return True
@@ -31,6 +29,18 @@ def _wait_for_server(server: str, timeout: int = 30) -> bool:
 
 
 def main():
+    try:
+        import webview
+    except ImportError:
+        _msgbox(
+            "서대리 — 설치 필요",
+            "pywebview가 설치되어 있지 않습니다.\n\n"
+            "설치 방법:\n"
+            "  pip install pywebview\n\n"
+            "또는 setup.bat를 다시 실행하세요.",
+        )
+        return
+
     try:
         server = sys.argv[1] if len(sys.argv) > 1 else SERVER
         url = f"{server}/static/brain_map.html"
