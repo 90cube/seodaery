@@ -58,10 +58,14 @@ set EXECUTOR_FILE=%MODELS_DIR%\%EXECUTOR_MODEL_FILE%
 echo [모델 확인]
 if exist "%EXECUTOR_FILE%" ( echo   [O] %MODEL_LABEL% : %EXECUTOR_FILE% ) else ( echo   [X] %MODEL_LABEL% : %EXECUTOR_FILE% )
 
-:: -- 서버 시작 --
+:: -- 서버 시작 + Brain Map 자동 열기 --
 echo.
 echo 선택 모델: %MODEL_LABEL%
 echo 서버 시작 중... (종료: Ctrl+C)
 echo.
+
+:: 3초 후 Brain Map 브라우저 열기 (백그라운드)
+start "" cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:8000/static/brain_map.html"
+
 call server\.venv\Scripts\activate.bat
 python -m server.main
