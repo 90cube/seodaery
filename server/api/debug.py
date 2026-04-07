@@ -36,13 +36,13 @@ async def trace_message(
 
     steps = []
 
-    # 1. 규칙 기반 분류
-    category = classify(message)
+    # 1. 하이브리드 분류 (즉시 판별 + LLM 폴백)
+    category = await classify(message)
     steps.append({
         "step": "classification",
-        "label": "규칙 기반 분류",
+        "label": "하이브리드 분류",
         "category": category,
-        "model": "rule-based",
+        "model": "hybrid",
     })
 
     # 2. 라우팅 분기
