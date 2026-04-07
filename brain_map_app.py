@@ -35,7 +35,7 @@ def _ask_server(default: str = "http://192.168.0.0:8000") -> str | None:
         f'WScript.StdOut.Write result\n'
     )
     tmp = os.path.join(tempfile.gettempdir(), "sdr_input.vbs")
-    with open(tmp, "w", encoding="utf-8") as f:
+    with open(tmp, "w", encoding="cp949") as f:
         f.write(vbs)
 
     try:
