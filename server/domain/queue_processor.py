@@ -76,13 +76,21 @@ async def _handle_new_user(request_id: str, user_id: str, message: str) -> dict:
 
 
 async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
-    """0.8B 분류 → 4-way 라우팅: chat / read / think / tool."""
+    """하이브리드 분류 → 4-way 라우팅: chat / read / think / tool."""
     session = get_session(user_id)
     if not session:
         session = start_session(user_id)
     add_message(user_id, "user", message)
 
-    category = await classify(message)
+    # 이전 assistant 메시지를 분류기에 전달 (맥락 판단용)
+    prev_assistant = None
+    msgs = session.get("messages", [])
+    for m in reversed(msgs[:-1]):
+        if m["role"] == "assistant":
+            prev_assistant = m["content"]
+            break
+
+    category = await classify(message, prev_assistant=prev_assistant)
 
     if category == "chat":
         return await _route_chat(request_id, user_id, session)

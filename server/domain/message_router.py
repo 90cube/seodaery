@@ -31,12 +31,6 @@ _GREETING = re.compile(
     re.IGNORECASE,
 )
 
-_CHAT_SHORT = re.compile(
-    r"^(네|응|ㅇㅇ|ㅇㅋ|ㄱㄱ|ㅎ|ㄴ|뭐|뭐해|뭐야|왜|아|오|헐|"
-    r"ㄷㄷ|대박|진짜|맞아|그래|알겠|ok|yes|no|yep|sure|lol)"
-    r"[\s!?.~ㅋㅎ]*$",
-    re.IGNORECASE,
-)
 
 _CLASSIFIER_SYSTEM = (
     "You are a message classifier. "
@@ -46,6 +40,9 @@ _CLASSIFIER_SYSTEM = (
     "- read: asking to look up, list, or check information\n"
     "- think: complex questions needing analysis or explanation\n"
     "- tool: requests to create, delete, modify, or schedule something\n\n"
+    "IMPORTANT: If the previous assistant message asked a yes/no question "
+    "(e.g. 'shall I do X?'), and the user confirms (e.g. 'ㅇㅇ', '응', "
+    "'네'), classify based on what was asked, NOT as chat.\n\n"
     "Reply with ONLY the category name. No explanation."
 )
 
@@ -55,21 +52,21 @@ _CATEGORY_RE = re.compile(r"\b(chat|read|think|tool)\b", re.IGNORECASE)
 # ── 분류기 ───────────────────────────────────────────────
 
 
-async def classify(message: str) -> str:
-    """하이브리드 분류: 즉시 판별 → LLM 폴백."""
+async def classify(
+    message: str,
+    prev_assistant: str | None = None,
+) -> str:
+    """하이브리드 분류: 즉시 판별 → LLM(맥락 포함) 폴백."""
     msg = message.strip()
 
-    # 1. 즉시 판별 — 인사/초단문은 LLM 안 탐
-    if _GREETING.match(msg):
+    # 1. 즉시 판별 — 명확한 인사만 (맥락 불필요한 것만)
+    if _GREETING.match(msg) and not prev_assistant:
         logger.info("분류(즉시): '%s' → chat [greeting]", msg[:30])
         return "chat"
-    if len(msg) <= 3 or _CHAT_SHORT.match(msg):
-        logger.info("분류(즉시): '%s' → chat [short]", msg[:30])
-        return "chat"
 
-    # 2. LLM 분류 — /v1/chat/completions + think:false
+    # 2. LLM 분류 — 이전 assistant 발화를 맥락으로 전달
     try:
-        category = await _classify_llm(msg)
+        category = await _classify_llm(msg, prev_assistant)
         if category:
             logger.info("분류(LLM): '%s' → %s", msg[:30], category)
             return category
@@ -81,14 +78,22 @@ async def classify(message: str) -> str:
     return _DEFAULT_CATEGORY
 
 
-async def _classify_llm(message: str) -> str | None:
-    """/v1/chat/completions로 분류. think=false 강제."""
+async def _classify_llm(
+    message: str,
+    prev_assistant: str | None = None,
+) -> str | None:
+    """/v1/chat/completions로 분류. 이전 대화 맥락 포함."""
+    messages = [{"role": "system", "content": _CLASSIFIER_SYSTEM}]
+
+    # 이전 assistant 발화가 있으면 맥락으로 전달
+    if prev_assistant:
+        messages.append({"role": "assistant", "content": prev_assistant})
+
+    messages.append({"role": "user", "content": message})
+
     url = f"{LIGHT_MODEL_URL}{LLAMA_COMPLETION_PATH}"
     payload = {
-        "messages": [
-            {"role": "system", "content": _CLASSIFIER_SYSTEM},
-            {"role": "user", "content": message},
-        ],
+        "messages": messages,
         "max_tokens": 8,
         "temperature": 0.0,
         "think": False,
