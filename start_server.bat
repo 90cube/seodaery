@@ -58,14 +58,54 @@ set EXECUTOR_FILE=%MODELS_DIR%\%EXECUTOR_MODEL_FILE%
 echo [모델 확인]
 if exist "%EXECUTOR_FILE%" ( echo   [O] %MODEL_LABEL% : %EXECUTOR_FILE% ) else ( echo   [X] %MODEL_LABEL% : %EXECUTOR_FILE% )
 
-:: -- 서버 시작 + Brain Map 자동 열기 --
+:: -- 서버를 별도 창에서 시작 --
 echo.
 echo 선택 모델: %MODEL_LABEL%
-echo 서버 시작 중... (종료: Ctrl+C)
+echo 서버 시작 중...
+echo.
+start "서대리 서버" cmd /k "call server\.venv\Scripts\activate.bat && python -m server.main"
+
+:: -- 모델 로딩 대기 (헬스체크) --
+echo [대기] 모델 로딩 중... (최대 3분)
+set /a WAITED=0
+set /a MAX_WAIT=180
+
+:health_loop
+if %WAITED% geq %MAX_WAIT% (
+    echo.
+    echo [오류] 모델 로딩 타임아웃 (%MAX_WAIT%초 초과)
+    pause
+    exit /b 1
+)
+
+:: 0.8B 헬스체크
+curl -sf http://localhost:8081/health >nul 2>&1
+if errorlevel 1 (
+    <nul set /p="."
+    timeout /t 2 /nobreak >nul
+    set /a WAITED+=2
+    goto health_loop
+)
+
+:: 9B 헬스체크
+curl -sf http://localhost:8082/health >nul 2>&1
+if errorlevel 1 (
+    <nul set /p="."
+    timeout /t 2 /nobreak >nul
+    set /a WAITED+=2
+    goto health_loop
+)
+
+echo.
+echo [완료] 모델 로딩 완료 (%WAITED%초 소요)
 echo.
 
-:: 3초 후 Brain Map 브라우저 열기 (백그라운드)
-start "" cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:8000/static/brain_map.html"
+:: -- Brain Map 브라우저 열기 --
+echo [열기] Brain Map 대시보드
+start "" http://127.0.0.1:8000/static/brain_map.html
 
+:: -- 클라이언트 실행 --
+echo [실행] 채팅 클라이언트
+echo.
 call server\.venv\Scripts\activate.bat
-python -m server.main
+python client.py
