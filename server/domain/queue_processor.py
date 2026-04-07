@@ -1,4 +1,4 @@
-"""큐 워커. 하이브리드 분류 → 4-way 라우팅 (chat/read/think/tool)."""
+"""큐 워커. 9B 단일 모델이 대화 + 도구 호출을 직접 처리한다."""
 
 from __future__ import annotations
 
@@ -10,14 +10,12 @@ from server.config.constants import (
     EXECUTOR_MODEL_NAME,
     EXECUTOR_MODEL_URL,
     EXECUTOR_TIMEOUT_SEC,
-    LIGHT_MODEL_NAME,
     PERSONA_SYSTEM_PROMPT,
     QUEUE_TIMEOUT_SEC,
     REGISTRATION_PROMPT,
     get_model_profile,
 )
 from server.domain.memory_extractor import validate_registration
-from server.domain.message_router import classify, generate_chat_response
 from server.domain.response_parser import extract_talk, extract_tool_call
 from server.domain.schema_compiler import compile_tool_prompt
 from server.domain.session_manager import (
@@ -60,13 +58,16 @@ async def process_one(item: dict) -> None:
 async def _dispatch(request_id: str, user_id: str, message: str) -> dict:
     if is_new_user(user_id):
         return await _handle_new_user(request_id, user_id, message)
-    return await _handle_chat(request_id, user_id, message)
+    return await _handle_message(request_id, user_id, message)
 
 
 async def _handle_new_user(request_id: str, user_id: str, message: str) -> dict:
     parsed = await validate_registration(message)
     if parsed and parsed.get("name"):
-        register_user(user_id, parsed["name"], parsed.get("position", ""), parsed.get("role", ""))
+        register_user(
+            user_id, parsed["name"],
+            parsed.get("position", ""), parsed.get("role", ""),
+        )
         start_session(user_id)
         add_message(user_id, "user", message)
         welcome = f"{parsed['name']}님, 반갑습니다! 무엇을 도와드릴까요?"
@@ -75,41 +76,14 @@ async def _handle_new_user(request_id: str, user_id: str, message: str) -> dict:
     return _ok(request_id, REGISTRATION_PROMPT, "system")
 
 
-async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
-    """하이브리드 분류 → 4-way 라우팅: chat / read / think / tool."""
+async def _handle_message(request_id: str, user_id: str, message: str) -> dict:
+    """9B가 직접 대화하고, 도구가 필요하면 스스로 호출한다."""
     session = get_session(user_id)
     if not session:
         session = start_session(user_id)
     add_message(user_id, "user", message)
 
-    # 이전 assistant 메시지를 분류기에 전달 (맥락 판단용)
-    prev_assistant = None
-    msgs = session.get("messages", [])
-    for m in reversed(msgs[:-1]):
-        if m["role"] == "assistant":
-            prev_assistant = m["content"]
-            break
-
-    category = await classify(message, prev_assistant=prev_assistant)
-
-    if category == "chat":
-        return await _route_chat(request_id, user_id, session)
-    return await _route_executor(request_id, user_id, session, category)
-
-
-async def _route_chat(request_id: str, user_id: str, session: dict) -> dict:
-    """chat → 0.8B 즉답."""
-    user_info = session.get("user")
-    message = session["messages"][-1]["content"]
-    reply = await generate_chat_response(message, user_info)
-    add_message(user_id, "assistant", reply)
-    return _ok(request_id, reply, LIGHT_MODEL_NAME)
-
-
-async def _route_executor(
-    request_id: str, user_id: str, session: dict, category: str,
-) -> dict:
-    """read/think/tool → 9B. category에 따라 think on/off."""
+    # 시스템 프롬프트 조립
     system = PERSONA_SYSTEM_PROMPT
     user_info = session.get("user")
     if user_info:
@@ -117,28 +91,25 @@ async def _route_executor(
             f"\n대화 상대: {user_info.get('name', '?')}"
             f" ({user_info.get('position', '')}, {user_info.get('role', '')})"
         )
-
     tool_prompt = compile_tool_prompt()
     if tool_prompt:
         system += f"\n\n{tool_prompt}"
 
+    # 대화 히스토리 조립
     messages = [{"role": "system", "content": system}]
     messages.extend(session.get("messages", [])[-10:])
 
-    use_think = category != "read"
-    raw_content = await _generate_with_tools(messages, use_think=use_think)
+    # 9B 응답 생성 (도구 호출 루프 포함)
+    raw_content = await _generate_with_tools(messages)
     talk = extract_talk(raw_content)
 
     add_message(user_id, "assistant", talk)
     return _ok(request_id, talk, EXECUTOR_MODEL_NAME)
 
 
-async def _generate_with_tools(
-    messages: list[dict], use_think: bool = True,
-) -> str:
+async def _generate_with_tools(messages: list[dict]) -> str:
     """응답을 생성하고, 도구 호출이 있으면 실행 후 재생성한다."""
     profile = get_model_profile()
-    think_param = profile["think_param"] if use_think else False
     for round_num in range(1, _MAX_TOOL_ROUNDS + 1):
         response = await request_completion(
             base_url=EXECUTOR_MODEL_URL,
@@ -146,20 +117,17 @@ async def _generate_with_tools(
             max_tokens=profile["max_tokens"],
             timeout=EXECUTOR_TIMEOUT_SEC,
             temperature=profile["temperature"],
-            think_param=think_param,
+            think_param=profile["think_param"],
             strip_think=profile["strip_think_tags"],
         )
 
-        # 도구 호출 JSON 감지
         tool_json = extract_tool_call(response)
         if tool_json is None:
-            return response  # 도구 없음 → 최종 응답
+            return response
 
-        # 도구 실행
-        logger.info("9B 도구 요청 (라운드 %d): %s", round_num, tool_json[:80])
+        logger.info("도구 요청 (라운드 %d): %s", round_num, tool_json[:80])
         result = await execute_tool_call(tool_json)
 
-        # 결과를 대화에 추가하고 9B에게 재응답 요청
         messages.append({"role": "assistant", "content": response})
         if result["success"]:
             obs = f"[도구 결과]\n{json.dumps(result['result'], ensure_ascii=False, default=str)}"
@@ -167,27 +135,33 @@ async def _generate_with_tools(
             obs = f"[도구 실패]\n{result['error']}"
         messages.append({"role": "user", "content": obs})
 
-    # 최대 라운드 초과 → 강제 최종 답변 요청
-    messages.append({"role": "user", "content": "도구 호출 횟수를 초과했습니다. 최종 답변을 해주세요."})
+    messages.append({
+        "role": "user",
+        "content": "도구 호출 횟수를 초과했습니다. 최종 답변을 해주세요.",
+    })
     return await request_completion(
         base_url=EXECUTOR_MODEL_URL,
         messages=messages,
         max_tokens=profile["max_tokens"],
         timeout=EXECUTOR_TIMEOUT_SEC,
         temperature=profile["temperature"],
-        think_param=think_param,
+        think_param=profile["think_param"],
         strip_think=profile["strip_think_tags"],
     )
 
 
 def _ok(rid: str, content: str, model: str) -> dict:
-    return {"request_id": rid, "content": content,
-            "model_used": model, "status": RequestStatus.COMPLETED.value}
+    return {
+        "request_id": rid, "content": content,
+        "model_used": model, "status": RequestStatus.COMPLETED.value,
+    }
 
 
 def _error(rid: str, content: str) -> dict:
-    return {"request_id": rid, "content": content,
-            "model_used": "none", "status": RequestStatus.ERROR.value}
+    return {
+        "request_id": rid, "content": content,
+        "model_used": "none", "status": RequestStatus.ERROR.value,
+    }
 
 
 async def run_worker() -> None:

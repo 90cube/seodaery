@@ -12,27 +12,19 @@ body{font-family:'Courier New',Courier,monospace;background:#0d0d0d;color:#c2c0b
 .pulse{animation:pulse 1.2s ease-in-out infinite}
 .spinner{animation:spin .8s linear infinite;display:inline-block}
 
-/* layout */
 .top-bar{padding:10px 16px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .title{font-size:13px;font-weight:700;letter-spacing:.1em;color:#e8e6dc}
 .sub{font-size:9px;color:#444;margin-top:1px}
 #badge{font-size:9px;padding:2px 10px;border-radius:99px;border:1px solid #333;color:#555;transition:all .3s}
-.mode-tabs{display:flex;gap:2px;margin-left:16px}
-.mode-tab{font-size:9px;padding:3px 10px;border:1px solid #222;border-radius:4px;cursor:pointer;color:#555;background:transparent;transition:all .2s}
-.mode-tab.on{color:#e8e6dc;border-color:#555;background:#1a1a1a}
 
-/* pipeline */
 .pipeline{display:flex;gap:3px;padding:8px 16px;flex-shrink:0}
 .pipe{flex:1;padding:4px 6px;border-radius:5px;border:1px solid #1a1a1a;opacity:.3;transition:all .3s}
 .pipe .dot{width:4px;height:4px;border-radius:50%;display:inline-block;margin-right:4px}
 .pipe .nm{font-size:9px;font-weight:700}
 .pipe .sm{font-size:8px;color:#333;margin-top:1px}
 
-/* main area */
-.main{flex:1;display:flex;gap:0;overflow:hidden;min-height:0}
-
-/* chat panel */
-.chat-col{flex:1;display:flex;flex-direction:column;border-right:1px solid #1a1a1a}
+.main{flex:1;display:flex;overflow:hidden;min-height:0}
+.chat-col{flex:1;display:flex;flex-direction:column}
 #chat-log{flex:1;overflow-y:auto;padding:12px 16px;font-size:12px;line-height:1.7}
 .msg{margin-bottom:10px}
 .msg-user .msg-name{color:#888;font-size:10px;font-weight:700}
@@ -40,33 +32,17 @@ body{font-family:'Courier New',Courier,monospace;background:#0d0d0d;color:#c2c0b
 .msg-sys .msg-name{color:#BA7517;font-size:10px;font-weight:700}
 .msg-text{margin-top:2px;color:#999}
 .msg-meta{font-size:9px;color:#333;margin-top:2px}
+.msg-tool{font-size:10px;color:#B54EA0;background:#1a0e18;padding:4px 8px;border-radius:4px;margin-top:4px;border:1px solid #2e0e22}
 
-/* right panel — routing debug */
-.debug-col{width:340px;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
-.debug-col.hidden{display:none}
-
-/* model panels */
-.model-panels{display:flex;flex-direction:column;gap:6px;padding:8px;flex-shrink:0}
-.mpanel{border:1px solid #1a1a1a;border-radius:6px;overflow:hidden;transition:all .3s}
-.mpanel.off{opacity:.18;filter:grayscale(1)}
-.mpanel.on{border-color:#333}
-.mph{padding:5px 10px;background:#111;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center}
-.mph .ml{font-size:10px;font-weight:700}
+.info-col{width:280px;border-left:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.mpanel{border-bottom:1px solid #1a1a1a;overflow:hidden}
+.mph{padding:6px 12px;background:#111;display:flex;justify-content:space-between;align-items:center}
+.mph .ml{font-size:10px;font-weight:700;color:#378ADD}
 .mph .ms{font-size:8px;color:#444}
-.mpb{padding:6px 10px;font-size:10px;line-height:1.6;color:#555;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow-y:auto;min-height:40px}
+.mpb{padding:6px 12px;font-size:10px;line-height:1.6;color:#555;white-space:pre-wrap;word-break:break-word;max-height:100px;overflow-y:auto}
+#flow-log{flex:1;overflow-y:auto;padding:6px 12px;font-size:9px;color:#333;line-height:1.7}
+.fl-s{color:#BA7517}.fl-ok{color:#1D9E75}.fl-t{color:#B54EA0}.fl-w{color:#e24b4b}
 
-/* prompt accordion */
-.prompts{flex:1;overflow-y:auto;padding:0 8px 8px}
-.pacc{border:1px solid #1a1a1a;border-radius:5px;margin-bottom:4px;overflow:hidden}
-.pacc-h{padding:5px 10px;background:#111;cursor:pointer;user-select:none;display:flex;justify-content:space-between;font-size:9px;font-weight:700;color:#555}
-.pacc-b{padding:6px 10px;font-size:9px;line-height:1.5;color:#444;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;display:none}
-.pacc-b.open{display:block}
-
-/* flow log */
-#flow-log{max-height:140px;overflow-y:auto;padding:6px 10px;border-top:1px solid #1a1a1a;font-size:9px;color:#333;line-height:1.7;flex-shrink:0}
-.fl-step{color:#BA7517}.fl-chat{color:#1D9E75}.fl-exec{color:#378ADD}.fl-warn{color:#e24b4b}
-
-/* input bar */
 .input-bar{padding:8px 16px;border-top:1px solid #1a1a1a;display:flex;gap:6px;align-items:flex-end;flex-shrink:0}
 textarea{flex:1;padding:8px 10px;font-size:12px;font-family:inherit;border:1px solid #222;border-radius:6px;background:#0a0a0a;color:#c2c0b6;line-height:1.4;resize:none;transition:border-color .2s}
 textarea:focus{outline:none;border-color:#444}
@@ -75,374 +51,124 @@ textarea::placeholder{color:#222}
 #send-btn:hover:not(:disabled){background:#151515;border-color:#444}
 #send-btn:disabled{opacity:.25;cursor:not-allowed}
 
-.tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:8px;font-weight:700;margin-left:6px}
-.tag-chat{background:#0e2e22;color:#1D9E75;border:1px solid #1D9E75}
-.tag-read{background:#0e1e2e;color:#378ADD;border:1px solid #378ADD}
-.tag-think{background:#2e1e0a;color:#BA7517;border:1px solid #BA7517}
-.tag-tool{background:#2e0e22;color:#B54EA0;border:1px solid #B54EA0}
-
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#222;border-radius:3px}
 </style>
 </head>
 <body>
-
-<!-- Top Bar -->
 <div class="top-bar">
-  <div style="display:flex;align-items:center">
-    <div>
-      <div class="title">SEODAERY BRAIN MAP</div>
-      <div class="sub">v0.3 — Dual Model Router</div>
-    </div>
-    <div class="mode-tabs">
-      <div class="mode-tab on" onclick="setMode('chat')">CHAT</div>
-      <div class="mode-tab" onclick="setMode('trace')">TRACE</div>
-    </div>
+  <div>
+    <div class="title">SEODAERY BRAIN MAP</div>
+    <div class="sub">v0.4 -- Single Model Architecture</div>
   </div>
   <div id="badge">connecting...</div>
 </div>
 
-<!-- Pipeline -->
 <div class="pipeline">
   <div class="pipe" id="s-input" data-c="#888780"><span class="dot" style="background:#888780"></span><span class="nm">INPUT</span><div class="sm">receive</div></div>
-  <div class="pipe" id="s-classify" data-c="#BA7517"><span class="dot" style="background:#BA7517"></span><span class="nm">CLASSIFY</span><div class="sm">0.8B</div></div>
-  <div class="pipe" id="s-route" data-c="#1D9E75"><span class="dot" style="background:#1D9E75"></span><span class="nm">ROUTE</span><div class="sm">4-way</div></div>
-  <div class="pipe" id="s-generate" data-c="#534AB7"><span class="dot" style="background:#534AB7"></span><span class="nm">GENERATE</span><div class="sm">LLM</div></div>
-  <div class="pipe" id="s-done" data-c="#0F6E56"><span class="dot" style="background:#0F6E56"></span><span class="nm">DONE</span><div class="sm">respond</div></div>
+  <div class="pipe" id="s-queue" data-c="#BA7517"><span class="dot" style="background:#BA7517"></span><span class="nm">QUEUE</span><div class="sm">enqueue</div></div>
+  <div class="pipe" id="s-gen" data-c="#378ADD"><span class="dot" style="background:#378ADD"></span><span class="nm">9B</span><div class="sm">generate</div></div>
+  <div class="pipe" id="s-tool" data-c="#B54EA0"><span class="dot" style="background:#B54EA0"></span><span class="nm">TOOL</span><div class="sm">if needed</div></div>
+  <div class="pipe" id="s-done" data-c="#1D9E75"><span class="dot" style="background:#1D9E75"></span><span class="nm">DONE</span><div class="sm">respond</div></div>
 </div>
 
-<!-- Main -->
 <div class="main">
-  <!-- Chat Column -->
   <div class="chat-col">
     <div id="chat-log"></div>
   </div>
-
-  <!-- Debug Column -->
-  <div class="debug-col" id="debug-col">
-    <div class="model-panels">
-      <div class="mpanel on" id="mp-08b">
-        <div class="mph"><span class="ml" style="color:#1D9E75">0.8B LIGHT</span><span class="ms" id="ms-08b">idle</span></div>
-        <div class="mpb" id="mb-08b">classify + chat</div>
-      </div>
-      <div class="mpanel off" id="mp-9b">
-        <div class="mph"><span class="ml" style="color:#378ADD">9B EXECUTOR</span><span class="ms" id="ms-9b">disabled</span></div>
-        <div class="mpb" id="mb-9b">read / think / tool</div>
-      </div>
+  <div class="info-col">
+    <div class="mpanel">
+      <div class="mph"><span class="ml">9B MODEL</span><span class="ms" id="m-status">idle</span></div>
+      <div class="mpb" id="m-info">Qwen3.5-9B | single model</div>
     </div>
-
-    <div class="prompts">
-      <div class="pacc" id="pa-cls">
-        <div class="pacc-h" onclick="togAcc('pa-cls')"><span>CLASSIFIER PROMPT</span><span class="pa-t">[+]</span></div>
-        <div class="pacc-b" id="pa-cls-b"></div>
-      </div>
-      <div class="pacc" id="pa-sys">
-        <div class="pacc-h" onclick="togAcc('pa-sys')"><span>SYSTEM PROMPT (9B)</span><span class="pa-t">[+]</span></div>
-        <div class="pacc-b" id="pa-sys-b"></div>
-      </div>
-      <div class="pacc" id="pa-chat">
-        <div class="pacc-h" onclick="togAcc('pa-chat')"><span>CHAT PROMPT (0.8B)</span><span class="pa-t">[+]</span></div>
-        <div class="pacc-b" id="pa-chat-b"></div>
-      </div>
-    </div>
-
     <div id="flow-log"></div>
   </div>
 </div>
 
-<!-- Input -->
 <div class="input-bar">
   <textarea id="inp" rows="2" placeholder="메시지 입력..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
   <button id="send-btn" onclick="send()">전송</button>
 </div>
 
 <script>
-const API = location.origin;
-let busy = false;
-let mode = 'chat'; // chat | trace
-let userId = localStorage.getItem('sdr_uid') || 'brain_' + Math.random().toString(36).slice(2,10);
-localStorage.setItem('sdr_uid', userId);
+const API=location.origin;
+let busy=false;
+let userId=localStorage.getItem('sdr_uid')||'brain_'+Math.random().toString(36).slice(2,10);
+localStorage.setItem('sdr_uid',userId);
 
-/* ── Health check on load ── */
 (async function boot(){
-  const b = document.getElementById('badge');
+  const b=document.getElementById('badge');
   for(let i=0;i<60;i++){
-    try{
-      const r = await fetch(API+'/api/queue/status');
-      if(r.ok){b.textContent='online';b.style.color='#1D9E75';b.style.borderColor='#1D9E75';return}
-    }catch(e){}
-    b.textContent='connecting '+'·'.repeat((i%3)+1);
-    await sleep(2000);
+    try{const r=await fetch(API+'/api/queue/status');if(r.ok){b.textContent='online';b.style.color='#1D9E75';b.style.borderColor='#1D9E75';return}}catch(e){}
+    b.textContent='connecting '+'·'.repeat((i%3)+1);await sleep(2000);
   }
-  b.textContent='offline';b.style.color='#e24b4b';b.style.borderColor='#e24b4b';
+  b.textContent='offline';b.style.color='#e24b4b';
 })();
 
-/* ── WebSocket for real-time queue events ── */
 let ws;
 function connectWS(){
   try{
-    ws = new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws/queue');
-    ws.onmessage = e => {
-      try{
-        const d = JSON.parse(e.data);
-        if(d.event==='completed' && d.request_id) checkPending(d.request_id);
-      }catch(ex){}
-    };
-    ws.onclose = () => setTimeout(connectWS, 3000);
+    ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws/queue');
+    ws.onclose=()=>setTimeout(connectWS,3000);
   }catch(e){}
 }
 connectWS();
 
-/* ── Pending requests ── */
-const pending = new Map();
-
-function checkPending(rid){
-  if(!pending.has(rid)) return;
-  pollResult(rid);
-}
-
-async function pollResult(rid){
-  const info = pending.get(rid);
-  if(!info) return;
-  try{
-    const r = await fetch(API+'/api/chat/'+rid, {headers:{'X-User-Id':userId}});
-    const d = await r.json();
-    if(d.status==='completed'||d.status==='error'){
-      pending.delete(rid);
-      const model = d.model_used||'?';
-      const content = d.content||'(응답 없음)';
-      addMsg('bot', content, model);
-      // 모델 기준으로 패널 업데이트
-      if(model.includes('0.8b')||model.includes('light')){
-        setMP('08b','on');setMP('9b','off');
-      }else{
-        setMP('08b','on');setMP('9b','on');
-      }
-      if(pending.size===0) unlock();
-    }
-  }catch(e){}
-}
-
-/* ── Mode switch ── */
-function setMode(m){
-  mode = m;
-  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('on'));
-  document.querySelector('.mode-tab:nth-child('+(m==='chat'?1:2)+')').classList.add('on');
-  document.getElementById('debug-col').classList.toggle('hidden', m==='chat'&&window.innerWidth<700);
-}
-
-/* ── Pipeline highlight ── */
-function setP(id,on){
-  const el=document.getElementById('s-'+id);if(!el)return;
-  const c=el.dataset.c;
-  if(on){el.style.opacity='1';el.style.borderColor=c;el.style.background=c+'18';el.classList.add('pulse')}
-  else{el.style.opacity='.3';el.style.borderColor='#1a1a1a';el.style.background='transparent';el.classList.remove('pulse')}
-}
-function clearP(){['input','classify','route','generate','done'].forEach(s=>setP(s,false))}
-
-/* ── Model panel ── */
-function setMP(id,state){
-  const p=document.getElementById('mp-'+id);
-  const s=document.getElementById('ms-'+id);
-  p.classList.remove('on','off');
-  if(state==='off'){p.classList.add('off');s.textContent='disabled';s.style.color='#333'}
-  else if(state==='work'){p.classList.add('on');s.innerHTML='<span class="spinner">*</span>';s.style.color='#BA7517'}
-  else if(state==='on'){p.classList.add('on');s.textContent='done';s.style.color='#1D9E75'}
-  else{p.classList.add('on');s.textContent='idle';s.style.color='#444'}
-}
-
-/* ── Model panel body ── */
-function setMB(id,text){document.getElementById('mb-'+id).textContent=text}
-
-/* ── Accordion ── */
-function togAcc(id){
-  const b=document.getElementById(id+'-b');
-  const t=document.querySelector('#'+id+' .pa-t');
-  b.classList.toggle('open');
-  t.textContent=b.classList.contains('open')?'[-]':'[+]';
-}
-function setAcc(id,text){document.getElementById(id+'-b').textContent=text}
-
-/* ── Flow log ── */
-function flog(msg,cls){
-  const el=document.getElementById('flow-log');
-  const ts=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  el.innerHTML+='<div><span style="color:#222">['+ts+']</span> <span class="'+(cls||'')+'">'+ msg+'</span></div>';
-  el.scrollTop=el.scrollHeight;
-}
-
-/* ── Chat log ── */
-function addMsg(role,text,model){
-  const log=document.getElementById('chat-log');
-  const cls=role==='user'?'msg-user':role==='bot'?'msg-bot':'msg-sys';
-  const name=role==='user'?'나':role==='bot'?'서대리':'SYSTEM';
-  let meta='';
-  if(model) meta='<div class="msg-meta">'+model+'</div>';
-  log.innerHTML+='<div class="msg '+cls+'"><div class="msg-name">'+name+'</div><div class="msg-text">'+esc(text)+'</div>'+meta+'</div>';
-  log.scrollTop=log.scrollHeight;
-}
-
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
-
-/* ── Badge ── */
-function setBadge(text,color){
-  const b=document.getElementById('badge');
-  b.textContent=text;b.style.color=color||'#555';b.style.borderColor=color||'#333';
-}
-
-/* ── Lock/Unlock ── */
+function setP(id,on){const el=document.getElementById('s-'+id);if(!el)return;const c=el.dataset.c;if(on){el.style.opacity='1';el.style.borderColor=c;el.style.background=c+'18';el.classList.add('pulse')}else{el.style.opacity='.3';el.style.borderColor='#1a1a1a';el.style.background='transparent';el.classList.remove('pulse')}}
+function clearP(){['input','queue','gen','tool','done'].forEach(s=>setP(s,false))}
+function setBadge(t,c){const b=document.getElementById('badge');b.textContent=t;b.style.color=c||'#555';b.style.borderColor=c||'#333'}
+function setModel(s,c){const el=document.getElementById('m-status');el.textContent=s;el.style.color=c||'#444'}
 function lock(){busy=true;document.getElementById('send-btn').disabled=true;document.getElementById('send-btn').textContent='...'}
 function unlock(){busy=false;document.getElementById('send-btn').disabled=false;document.getElementById('send-btn').textContent='전송'}
+function flog(m,c){const el=document.getElementById('flow-log');const ts=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});el.innerHTML+='<div><span style="color:#222">['+ts+']</span> <span class="'+(c||'')+'">'+ m+'</span></div>';el.scrollTop=el.scrollHeight}
+function addMsg(role,text,model){const log=document.getElementById('chat-log');const cls=role==='user'?'msg-user':role==='bot'?'msg-bot':'msg-sys';const name=role==='user'?'나':role==='bot'?'서대리':'SYSTEM';let meta='';if(model)meta='<div class="msg-meta">'+model+'</div>';log.innerHTML+='<div class="msg '+cls+'"><div class="msg-name">'+name+'</div><div class="msg-text">'+esc(text)+'</div>'+meta+'</div>';log.scrollTop=log.scrollHeight}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
 
-/* ── Send ── */
 async function send(){
   if(busy)return;
   const inp=document.getElementById('inp');
   const msg=inp.value.trim();
   if(!msg)return;
-  inp.value='';
-  lock();
-
+  inp.value='';lock();
   addMsg('user',msg);
-  clearP();
-  setP('input',true);
-  setBadge('input','#888780');
-  flog('INPUT: "'+msg.substring(0,40)+'"','fl-step');
+  clearP();setP('input',true);setBadge('input','#888780');
+  flog('INPUT: "'+msg.substring(0,40)+'"','fl-s');
 
-  if(mode==='trace') await runTrace(msg);
-  else await runChat(msg);
-}
-
-/* ── Chat mode: real /api/chat ── */
-async function runChat(msg){
   try{
-    // 1. Classify (trace in background for debug panel)
-    setP('input',false);
-    setP('classify',true);
-    setBadge('classifying','#BA7517');
-    setMP('08b','work');
-    setMP('9b','off');
-    flog('0.8B classifying...','fl-step');
+    setP('input',false);setP('queue',true);
+    setBadge('queued','#BA7517');
+    const chatData=await fetch(API+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':userId},body:JSON.stringify({message:msg})}).then(r=>r.json());
+    if(chatData.duplicate){addMsg('sys','중복 요청');unlock();return}
+    if(!chatData.request_id){addMsg('sys','전송 실패');unlock();return}
 
-    // chat만 보냄 (trace 동시 호출하면 0.8B 슬롯 충돌)
-    const chatData = await fetch(API+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':userId},body:JSON.stringify({message:msg})}).then(r=>r.json());
-
-    // Handle chat queue
-    if(chatData.duplicate){
-      addMsg('sys','중복 요청');
-      unlock();return;
-    }
-    if(!chatData.request_id){
-      addMsg('sys','전송 실패');
-      unlock();return;
-    }
+    setP('queue',false);setP('gen',true);
+    setBadge('generating','#378ADD');
+    setModel('working...','#BA7517');
+    flog('9B generating...','fl-s');
 
     const rid=chatData.request_id;
-
-    setP('classify',false);
-    setP('generate',true);
-    setBadge('waiting...','#534AB7');
-    setMP('08b','work');
-    flog('waiting for response...','fl-step');
-
-    // Poll for result
-    pending.set(rid, {msg});
     const poll=setInterval(async()=>{
-      await pollResult(rid);
-      if(!pending.has(rid)){
-        clearInterval(poll);
-        setP('generate',false);setP('done',true);
-        setBadge('done','#0F6E56');
-        flog('response received','fl-chat');
-        setTimeout(()=>{clearP();setBadge('online','#1D9E75')},2000);
-      }
+      try{
+        const r=await fetch(API+'/api/chat/'+rid,{headers:{'X-User-Id':userId}});
+        const d=await r.json();
+        if(d.status==='completed'||d.status==='error'){
+          clearInterval(poll);
+          addMsg('bot',d.content||'(응답 없음)',d.model_used);
+          setP('gen',false);setP('done',true);
+          setBadge('done','#1D9E75');
+          setModel('done','#1D9E75');
+          flog('response: '+(d.model_used||'?'),'fl-ok');
+          setTimeout(()=>{clearP();setBadge('online','#1D9E75');setModel('idle','#444')},2000);
+          unlock();
+        }
+      }catch(e){}
     },800);
-
   }catch(e){
     addMsg('sys','오류: '+e.message);
-    setBadge('error','#e24b4b');
-    flog('ERROR: '+e.message,'fl-warn');
+    setBadge('error','#e24b4b');flog('ERROR: '+e.message,'fl-w');
     clearP();unlock();
   }
 }
 
-/* ── Trace mode: debug only, no queue ── */
-async function runTrace(msg){
-  try{
-    setP('input',false);
-    setP('classify',true);
-    setBadge('tracing','#BA7517');
-    setMP('08b','work');
-
-    const r=await fetch(API+'/api/debug/trace',{method:'POST',headers:{'Content-Type':'application/json','X-User-Id':userId},body:JSON.stringify({message:msg})});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const data=await r.json();
-
-    showTraceSteps(data, msg);
-
-    // If trace includes chat_response, show it
-    const chatStep = data.steps.find(s=>s.step==='chat_response');
-    if(chatStep){
-      addMsg('bot', chatStep.content, data.target_model);
-    }else{
-      addMsg('sys','[trace only] category='+data.category+' -> 9B 호출 안 함 (trace 모드)');
-    }
-
-    setP('done',true);
-    setBadge('done','#0F6E56');
-    flog('trace complete','fl-step');
-    setTimeout(()=>{clearP();setBadge('online','#1D9E75')},2000);
-  }catch(e){
-    addMsg('sys','trace error: '+e.message);
-    flog('ERROR: '+e.message,'fl-warn');
-    setBadge('error','#e24b4b');
-    clearP();
-  }
-  unlock();
-}
-
-/* ── Show trace steps in debug panel ── */
-function showTraceSteps(data, msg){
-  const cat = data.category;
-  for(const step of data.steps){
-    if(step.step==='classifier_prompt'){
-      setAcc('pa-cls', step.content);
-      flog('classifier prompt ('+step.content.length+' chars)','fl-step');
-    }
-    if(step.step==='classification'){
-      setP('classify',false);setP('route',true);
-      setMB('08b','INPUT: '+msg+'\nRESULT: '+cat.toUpperCase());
-      setMP('08b','on');
-      flog('classified: '+cat.toUpperCase(),'fl-chat');
-    }
-    if(step.step==='chat_prompt'){
-      setAcc('pa-chat', step.content);
-      setMP('9b','off');
-      setMB('9b','category=chat -> 9B NOT NEEDED');
-      flog('0.8B chat prompt built','fl-chat');
-    }
-    if(step.step==='chat_response'){
-      setP('route',false);setP('generate',true);
-      setMP('08b','on');
-      flog('0.8B responded','fl-chat');
-      setP('generate',false);
-    }
-    if(step.step==='executor_system'){
-      setAcc('pa-sys', step.content);
-      setMP('9b','on');
-      flog('9B system prompt ('+step.content.length+' chars)','fl-exec');
-    }
-    if(step.step==='executor_config'){
-      const c=step.config;
-      setMB('9b','temp='+c.temperature+' think='+c.use_think+'\nmax_tokens='+c.max_tokens+'\ncategory='+cat);
-      flog('9B config ready','fl-exec');
-    }
-  }
-}
-
-/* ── Response handler for chat mode ── */
-
-
-function catColor(c){return{chat:'#1D9E75',read:'#378ADD',think:'#BA7517',tool:'#B54EA0'}[c]||'#555'}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 </script>
 </body>
