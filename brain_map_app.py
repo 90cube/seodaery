@@ -28,7 +28,7 @@ def _ask_server(default: str = "http://192.168.0.0:8000") -> str | None:
 
     vbs = (
         f'result = InputBox("서대리 서버 주소를 입력하세요:", '
-        f'"서대리 — 서버 연결", "{default}")\n'
+        f'"서대리 - 서버 연결", "{default}")\n'
         f'If result = "" Then\n'
         f'  WScript.Quit 1\n'
         f'End If\n'
