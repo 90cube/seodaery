@@ -32,19 +32,7 @@ _GREETING = re.compile(
 )
 
 
-_CLASSIFIER_SYSTEM = (
-    "<user input></user input> 태그 안의 메시지를 분류하세요.\n\n"
-    "카테고리:\n"
-    "- chat: 인사, 잡담, 감사, 단순 대화\n"
-    "- read: 정보 조회, 목록 확인, 검색 요청\n"
-    "- think: 분석, 설명, 비교 등 복잡한 질문\n"
-    "- tool: 생성, 삭제, 수정, 예약 등 실행 요청\n\n"
-    "중요: 이전 assistant 메시지가 확인 질문(예: '등록할까요?')이고 "
-    "사용자가 확인(예: 'ㅇㅇ', '응', '네')하면, "
-    "질문의 원래 의도에 맞는 카테고리로 분류하세요.\n\n"
-    "반드시 아래 형식으로만 응답하세요:\n"
-    "<result>카테고리</result>"
-)
+_CLASSIFIER_SYSTEM = "분류: chat/read/think/tool. <result>하나</result>로 답하세요."
 
 _RESULT_RE = re.compile(r"<result>\s*(chat|read|think|tool)\s*</result>", re.IGNORECASE)
 _CATEGORY_RE = re.compile(r"\b(chat|read|think|tool)\b", re.IGNORECASE)
@@ -84,16 +72,16 @@ async def _classify_llm(
     prev_assistant: str | None = None,
 ) -> str | None:
     """/v1/chat/completions로 분류. 이전 대화 맥락 포함."""
-    messages = [{"role": "system", "content": _CLASSIFIER_SYSTEM}]
-
-    # 이전 assistant 발화가 있으면 맥락으로 전달
+    # 맥락이 있으면 user message에 한 줄로 포함
     if prev_assistant:
-        messages.append({"role": "assistant", "content": prev_assistant})
+        user_content = f"이전: {prev_assistant[:60]}\n<user input>{message}</user input>"
+    else:
+        user_content = f"<user input>{message}</user input>"
 
-    messages.append({
-        "role": "user",
-        "content": f"<user input>{message}</user input>",
-    })
+    messages = [
+        {"role": "system", "content": _CLASSIFIER_SYSTEM},
+        {"role": "user", "content": user_content},
+    ]
 
     url = f"{LIGHT_MODEL_URL}{LLAMA_COMPLETION_PATH}"
     payload = {
