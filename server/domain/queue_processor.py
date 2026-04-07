@@ -1,4 +1,4 @@
-"""큐 워커. 0.8B 분류 → 4-way 라우팅 (chat/read/think/tool)."""
+"""큐 워커. 규칙 기반 분류 → 4-way 라우팅 (chat/read/think/tool)."""
 
 from __future__ import annotations
 
@@ -82,7 +82,7 @@ async def _handle_chat(request_id: str, user_id: str, message: str) -> dict:
         session = start_session(user_id)
     add_message(user_id, "user", message)
 
-    category = await classify(message)
+    category = classify(message)
 
     if category == "chat":
         return await _route_chat(request_id, user_id, session)

@@ -9,23 +9,14 @@ from fastapi.responses import JSONResponse
 
 from server.config.constants import (
     EXECUTOR_MODEL_NAME,
-    EXECUTOR_MODEL_URL,
-    EXECUTOR_TIMEOUT_SEC,
     LIGHT_MODEL_NAME,
     LIGHT_MODEL_URL,
-    LIGHT_TIMEOUT_SEC,
-    PERSONA_SYSTEM_PROMPT,
-    ROUTER_SYSTEM_PROMPT,
     LIGHT_CHAT_SYSTEM_PROMPT,
+    PERSONA_SYSTEM_PROMPT,
     get_model_profile,
 )
-from server.domain.message_router import (
-    classify,
-    generate_chat_response,
-    _strip_think,
-)
+from server.domain.message_router import classify, generate_chat_response
 from server.domain.schema_compiler import compile_tool_prompt
-from server.domain.session_manager import get_session, start_session
 
 logger = logging.getLogger(__name__)
 
@@ -45,34 +36,19 @@ async def trace_message(
 
     steps = []
 
-    # 1. 분류기 프롬프트
-    classifier_prompt = (
-        f"<|system|>\n{ROUTER_SYSTEM_PROMPT}\n"
-        f"<|user|>\n{message}\n<|assistant|>\n"
-    )
-    steps.append({
-        "step": "classifier_prompt",
-        "label": "0.8B 분류 프롬프트",
-        "model": LIGHT_MODEL_NAME,
-        "url": f"{LIGHT_MODEL_URL}/completion",
-        "content": classifier_prompt,
-    })
-
-    # 2. 분류 실행
-    category = await classify(message)
+    # 1. 규칙 기반 분류
+    category = classify(message)
     steps.append({
         "step": "classification",
-        "label": "분류 결과",
+        "label": "규칙 기반 분류",
         "category": category,
-        "model": LIGHT_MODEL_NAME,
+        "model": "rule-based",
     })
 
-    # 3. 라우팅 분기
+    # 2. 라우팅 분기
     if category == "chat":
-        # chat → 0.8B 즉답
-        chat_system = LIGHT_CHAT_SYSTEM_PROMPT
         chat_prompt = (
-            f"<|system|>\n{chat_system}\n"
+            f"<|system|>\n{LIGHT_CHAT_SYSTEM_PROMPT}\n"
             f"<|user|>\n{message}\n<|assistant|>\n"
         )
         steps.append({
@@ -92,7 +68,6 @@ async def trace_message(
         })
         target_model = LIGHT_MODEL_NAME
     else:
-        # read/think/tool → 9B
         profile = get_model_profile()
         system = PERSONA_SYSTEM_PROMPT
         tool_prompt = compile_tool_prompt()
