@@ -32,9 +32,8 @@ _GREETING = re.compile(
 )
 
 
-_CLASSIFIER_SYSTEM = "<user input> 안의 메시지를 chat, read, think, tool 중 하나로 분류. <result></result> 안에 답."
+_CLASSIFIER_SYSTEM = "<user input> 안의 메시지를 chat, read, think, tool 중 하나로 분류. 한 단어만 답."
 
-_RESULT_RE = re.compile(r"<result>\s*(chat|read|think|tool)\s*</result>", re.IGNORECASE)
 _CATEGORY_RE = re.compile(r"\b(chat|read|think|tool)\b", re.IGNORECASE)
 
 
@@ -103,16 +102,8 @@ async def _classify_llm(
     cleaned = _strip_think(raw) if "<think>" in raw else raw
     logger.info("LLM 분류 원문: [%s] → 정제: [%s]", raw[:80], cleaned[:80])
 
-    # 1차: <result>카테고리</result> 형식
-    rm = _RESULT_RE.search(cleaned)
-    if rm:
-        return rm.group(1).lower()
-
-    # 2차: 폴백 — 텍스트에서 카테고리 단어 직접 검색
     match = _CATEGORY_RE.search(cleaned)
-    if match:
-        return match.group(1).lower()
-    return None
+    return match.group(1).lower() if match else None
 
 
 # ── think 태그 제거 ──────────────────────────────────────
