@@ -10,8 +10,10 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from server.api.chat import router as chat_router
+from server.api.debug import router as debug_router
 from server.api.event import router as event_router
 from server.api.websocket import router as ws_router
 from server.config.constants import (
@@ -45,8 +47,13 @@ app.add_middleware(
 )
 
 app.include_router(chat_router)
+app.include_router(debug_router)
 app.include_router(event_router)
 app.include_router(ws_router)
+
+_static_dir = Path(__file__).resolve().parent / "static"
+if _static_dir.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 _worker_task: asyncio.Task | None = None
 

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEODAERY BRAIN MAP</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    background: #0d0d0d; color: #c2c0b6;
+    min-height: 100vh; padding: 20px;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .active-pulse { animation: pulse 1.2s ease-in-out infinite; }
+  .spinner { animation: spin .8s linear infinite; display:inline-block; }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid #222;
+  }
+  .header-title { font-size: 14px; font-weight: 700; letter-spacing: .1em; color: #e8e6dc; }
+  .header-sub { font-size: 10px; color: #555; margin-top: 2px; }
+  #phase-badge {
+    font-size: 10px; padding: 3px 12px; border-radius: 99px;
+    border: 1px solid #333; color: #555; transition: all .3s;
+  }
+
+  /* ── Pipeline Steps ── */
+  .pipeline {
+    display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .pipe-step {
+    flex: 1; min-width: 70px; padding: 6px 8px;
+    border-radius: 6px; border: 1px solid #1e1e1e;
+    opacity: .35; transition: all .3s; cursor: default;
+  }
+  .pipe-step .step-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    display: inline-block; margin-right: 5px;
+    transition: box-shadow .3s;
+  }
+  .pipe-step .step-name { font-size: 10px; font-weight: 600; }
+  .pipe-step .step-sub { font-size: 9px; color: #444; margin-top: 2px; }
+
+  /* ── Dual Core ── */
+  .dual-core { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .core-panel {
+    border: 1px solid #1e1e1e; border-radius: 8px; overflow: hidden;
+    transition: all .4s;
+  }
+  .core-panel.disabled {
+    opacity: .2; pointer-events: none;
+    filter: grayscale(1);
+  }
+  .core-panel.active { border-color: #444; }
+  .core-header {
+    padding: 7px 12px; border-bottom: 1px solid #1e1e1e;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #111;
+  }
+  .core-label { font-size: 11px; font-weight: 700; }
+  .core-desc { font-size: 9px; color: #444; margin-top: 1px; }
+  .core-status { font-size: 9px; color: #444; }
+  .core-body {
+    padding: 8px 12px; min-height: 120px; max-height: 260px;
+    overflow-y: auto; font-size: 11px; line-height: 1.7;
+    color: #666; white-space: pre-wrap; word-break: break-word;
+  }
+
+  /* ── Prompt Viewer ── */
+  .prompt-viewer {
+    margin-bottom: 10px; border: 1px solid #1e1e1e;
+    border-radius: 8px; overflow: hidden;
+  }
+  .pv-header {
+    padding: 7px 12px; background: #111;
+    border-bottom: 1px solid #1e1e1e;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .pv-title { font-size: 11px; font-weight: 700; color: #888; }
+  .pv-toggle { font-size: 9px; color: #444; }
+  .pv-body {
+    padding: 8px 12px; font-size: 10px; line-height: 1.6;
+    color: #555; white-space: pre-wrap; word-break: break-word;
+    max-height: 300px; overflow-y: auto;
+    display: none;
+  }
+  .pv-body.open { display: block; }
+
+  /* ── Flow Log ── */
+  #flow-log {
+    margin-bottom: 10px; padding: 8px 12px;
+    border-radius: 6px; border: 1px solid #1e1e1e;
+    background: #0a0a0a; max-height: 180px; overflow-y: auto;
+    display: none;
+  }
+  .log-title { font-size: 10px; font-weight: 700; color: #444; margin-bottom: 4px; }
+  #log-entries { font-size: 10px; color: #444; line-height: 1.8; }
+  .log-entry { padding: 1px 0; }
+  .log-ts { color: #333; }
+  .log-step { color: #BA7517; }
+  .log-chat { color: #1D9E75; }
+  .log-exec { color: #378ADD; }
+  .log-warn { color: #e24b4b; }
+
+  /* ── Error ── */
+  #error-box {
+    display: none; margin-bottom: 8px; padding: 7px 12px;
+    border-radius: 5px; border: 1px solid #7a2020;
+    font-size: 11px; color: #e24b4b; background: #1a0808;
+  }
+
+  /* ── Input ── */
+  .input-area { display: flex; gap: 6px; align-items: flex-end; }
+  textarea {
+    flex: 1; padding: 9px 12px; font-size: 12px;
+    font-family: inherit; border: 1px solid #282828;
+    border-radius: 7px; background: #0e0e0e; color: #c2c0b6;
+    line-height: 1.5; resize: none; transition: border-color .2s;
+  }
+  textarea:focus { outline: none; border-color: #444; }
+  textarea::placeholder { color: #2a2a2a; }
+  #run-btn {
+    padding: 9px 16px; font-size: 12px; font-family: inherit;
+    border: 1px solid #282828; border-radius: 7px;
+    background: transparent; color: #c2c0b6; cursor: pointer;
+    white-space: nowrap; height: 58px; transition: all .15s;
+  }
+  #run-btn:hover:not(:disabled) { background: #161616; border-color: #444; }
+  #run-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .input-hint { font-size: 9px; color: #2a2a2a; margin-top: 5px; }
+
+  /* ── Tag Badges ── */
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+  .tag-chat { background: #0e2e22; color: #1D9E75; border: 1px solid #1D9E75; }
+  .tag-read { background: #0e1e2e; color: #378ADD; border: 1px solid #378ADD; }
+  .tag-think { background: #2e1e0a; color: #BA7517; border: 1px solid #BA7517; }
+  .tag-tool { background: #2e0e22; color: #B54EA0; border: 1px solid #B54EA0; }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="header-title">SEODAERY BRAIN MAP</div>
+      <div class="header-sub">v0.3 -- Dual Model Routing Debugger</div>
+    </div>
+    <div id="phase-badge">idle</div>
+  </div>
+
+  <!-- Pipeline Steps -->
+  <div class="pipeline">
+    <div class="pipe-step" id="s-input" data-color="#888780">
+      <span class="step-dot" style="background:#888780"></span>
+      <span class="step-name">INPUT</span>
+      <div class="step-sub">message</div>
+    </div>
+    <div class="pipe-step" id="s-classify" data-color="#BA7517">
+      <span class="step-dot" style="background:#BA7517"></span>
+      <span class="step-name">CLASSIFY</span>
+      <div class="step-sub">0.8B router</div>
+    </div>
+    <div class="pipe-step" id="s-route" data-color="#1D9E75">
+      <span class="step-dot" style="background:#1D9E75"></span>
+      <span class="step-name">ROUTE</span>
+      <div class="step-sub">4-way split</div>
+    </div>
+    <div class="pipe-step" id="s-prompt" data-color="#378ADD">
+      <span class="step-dot" style="background:#378ADD"></span>
+      <span class="step-name">PROMPT</span>
+      <div class="step-sub">system build</div>
+    </div>
+    <div class="pipe-step" id="s-generate" data-color="#534AB7">
+      <span class="step-dot" style="background:#534AB7"></span>
+      <span class="step-name">GENERATE</span>
+      <div class="step-sub">LLM call</div>
+    </div>
+    <div class="pipe-step" id="s-parse" data-color="#0F6E56">
+      <span class="step-dot" style="background:#0F6E56"></span>
+      <span class="step-name">PARSE</span>
+      <div class="step-sub">extract talk</div>
+    </div>
+  </div>
+
+  <!-- Dual Core Panels -->
+  <div class="dual-core">
+    <div class="core-panel" id="panel-08b">
+      <div class="core-header">
+        <div>
+          <div class="core-label" style="color:#1D9E75">0.8B -- LIGHT</div>
+          <div class="core-desc">Qwen3.5-0.8B | classify + chat</div>
+        </div>
+        <div class="core-status" id="status-08b">idle</div>
+      </div>
+      <div class="core-body" id="out-08b"><span style="opacity:.25">0.8B always active for classify</span></div>
+    </div>
+
+    <div class="core-panel disabled" id="panel-9b">
+      <div class="core-header">
+        <div>
+          <div class="core-label" style="color:#378ADD">9B -- EXECUTOR</div>
+          <div class="core-desc">Qwen3.5-9B | read/think/tool</div>
+        </div>
+        <div class="core-status" id="status-9b">disabled</div>
+      </div>
+      <div class="core-body" id="out-9b"><span style="opacity:.25">chat category = disabled</span></div>
+    </div>
+  </div>
+
+  <!-- Prompt Viewers (collapsible) -->
+  <div class="prompt-viewer" id="pv-classifier">
+    <div class="pv-header" onclick="togglePV('pv-classifier')">
+      <span class="pv-title">CLASSIFIER PROMPT (0.8B /completion)</span>
+      <span class="pv-toggle">[show]</span>
+    </div>
+    <div class="pv-body" id="pv-classifier-body"></div>
+  </div>
+
+  <div class="prompt-viewer" id="pv-system">
+    <div class="pv-header" onclick="togglePV('pv-system')">
+      <span class="pv-title">SYSTEM PROMPT (9B persona)</span>
+      <span class="pv-toggle">[show]</span>
+    </div>
+    <div class="pv-body" id="pv-system-body"></div>
+  </div>
+
+  <div class="prompt-viewer" id="pv-chat">
+    <div class="pv-header" onclick="togglePV('pv-chat')">
+      <span class="pv-title">CHAT PROMPT (0.8B chat)</span>
+      <span class="pv-toggle">[show]</span>
+    </div>
+    <div class="pv-body" id="pv-chat-body"></div>
+  </div>
+
+  <!-- Flow Log -->
+  <div id="flow-log">
+    <div class="log-title">FLOW LOG</div>
+    <div id="log-entries"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-box"></div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <textarea id="user-input" rows="2"
+      placeholder="trace message..."
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();runTrace()}"></textarea>
+    <button onclick="runTrace()" id="run-btn">TRACE</button>
+  </div>
+  <div class="input-hint">Enter = send | Shift+Enter = newline | calls /api/debug/trace</div>
+</div>
+
+<script>
+const API_BASE = location.origin;
+let busy = false;
+
+/* ── Pipeline step highlighting ── */
+function setStep(id, active) {
+  const el = document.getElementById('s-' + id);
+  if (!el) return;
+  const c = el.dataset.color;
+  const dot = el.querySelector('.step-dot');
+  if (active) {
+    el.style.opacity = '1';
+    el.style.borderColor = c;
+    el.style.background = c + '18';
+    dot.style.boxShadow = '0 0 6px ' + c;
+    el.classList.add('active-pulse');
+  } else {
+    el.style.opacity = '.35';
+    el.style.borderColor = '#1e1e1e';
+    el.style.background = 'transparent';
+    dot.style.boxShadow = 'none';
+    el.classList.remove('active-pulse');
+  }
+}
+
+function clearAllSteps() {
+  ['input','classify','route','prompt','generate','parse'].forEach(s => setStep(s, false));
+}
+
+function setPhase(text, color) {
+  const b = document.getElementById('phase-badge');
+  b.textContent = text;
+  b.style.color = color || '#555';
+  b.style.borderColor = color || '#333';
+}
+
+/* ── Panel control ── */
+function setPanel(id, state) {
+  const p = document.getElementById('panel-' + id);
+  const s = document.getElementById('status-' + id);
+  p.classList.remove('disabled', 'active');
+  if (state === 'disabled') {
+    p.classList.add('disabled');
+    s.textContent = 'disabled';
+    s.style.color = '#333';
+  } else if (state === 'active') {
+    p.classList.add('active');
+    s.textContent = 'active';
+    s.style.color = '#1D9E75';
+  } else if (state === 'working') {
+    p.classList.add('active');
+    s.innerHTML = '<span class="spinner">*</span> working';
+    s.style.color = '#BA7517';
+  } else {
+    s.textContent = 'idle';
+    s.style.color = '#444';
+  }
+}
+
+/* ── Prompt viewer ── */
+function togglePV(id) {
+  const body = document.getElementById(id + '-body');
+  const toggle = document.querySelector('#' + id + ' .pv-toggle');
+  body.classList.toggle('open');
+  toggle.textContent = body.classList.contains('open') ? '[hide]' : '[show]';
+}
+
+function setPV(id, text) {
+  document.getElementById(id + '-body').textContent = text;
+}
+
+/* ── Flow log ── */
+function log(msg, cls) {
+  const box = document.getElementById('flow-log');
+  box.style.display = 'block';
+  const entries = document.getElementById('log-entries');
+  const ts = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',fractionalSecondDigits:2});
+  const d = document.createElement('div');
+  d.className = 'log-entry';
+  d.innerHTML = '<span class="log-ts">[' + ts + ']</span> <span class="' + (cls||'') + '">' + msg + '</span>';
+  entries.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ── Type text effect ── */
+function typeText(el, text) {
+  return new Promise(resolve => {
+    el.textContent = '';
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i >= text.length) { clearInterval(iv); resolve(); return; }
+      el.textContent += text[i];
+      el.scrollTop = el.scrollHeight;
+      i++;
+    }, 4);
+  });
+}
+
+/* ── Category tag ── */
+function catTag(cat) {
+  return '<span class="tag tag-' + cat + '">' + cat.toUpperCase() + '</span>';
+}
+
+/* ── Main trace ── */
+async function runTrace() {
+  if (busy) return;
+  const input = document.getElementById('user-input').value.trim();
+  if (!input) return;
+
+  busy = true;
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = '...';
+  document.getElementById('user-input').value = '';
+  document.getElementById('error-box').style.display = 'none';
+  document.getElementById('flow-log').style.display = 'none';
+  document.getElementById('log-entries').textContent = '';
+
+  // Reset
+  clearAllSteps();
+  setPanel('08b', 'idle');
+  setPanel('9b', 'disabled');
+  document.getElementById('out-08b').innerHTML = '<span style="opacity:.25">...</span>';
+  document.getElementById('out-9b').innerHTML = '<span style="opacity:.25">waiting for classify...</span>';
+  setPV('pv-classifier', '');
+  setPV('pv-system', '');
+  setPV('pv-chat', '');
+
+  try {
+    // Step 1: Input
+    setStep('input', true);
+    setPhase('input', '#888780');
+    log('INPUT: "' + input.substring(0,50) + (input.length>50?'...':'') + '"', 'log-step');
+    await sleep(300);
+    setStep('input', false);
+
+    // Step 2: Classify
+    setStep('classify', true);
+    setPhase('classifying', '#BA7517');
+    setPanel('08b', 'working');
+    log('0.8B classify start...', 'log-step');
+
+    const t0 = performance.now();
+    const resp = await fetch(API_BASE + '/api/debug/trace', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: input})
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+
+    log('trace complete (' + elapsed + 's)', 'log-step');
+
+    // Process steps
+    for (const step of data.steps) {
+      if (step.step === 'classifier_prompt') {
+        setPV('pv-classifier', step.content);
+        log('classifier prompt built (' + step.content.length + ' chars)', 'log-step');
+      }
+      if (step.step === 'classification') {
+        setStep('classify', false);
+        setStep('route', true);
+        setPhase('route:' + step.category, getCatColor(step.category));
+        const out08b = document.getElementById('out-08b');
+        out08b.innerHTML = '';
+        await typeText(out08b, 'CLASSIFY: ' + input + '\n\nRESULT: ' + step.category.toUpperCase());
+        log('classified: ' + catTag(step.category), 'log-chat');
+        await sleep(400);
+        setStep('route', false);
+      }
+      if (step.step === 'chat_prompt') {
+        setPV('pv-chat', step.content);
+        log('0.8B chat prompt built', 'log-chat');
+      }
+      if (step.step === 'chat_response') {
+        // chat -> 0.8B handles it, 9B stays disabled
+        setStep('generate', true);
+        setPhase('0.8B responding', '#1D9E75');
+        setPanel('08b', 'working');
+        setPanel('9b', 'disabled');
+
+        const out08b = document.getElementById('out-08b');
+        out08b.innerHTML = '';
+        await typeText(out08b, 'CLASSIFY: ' + input + ' -> ' + data.category.toUpperCase() + '\n---\nRESPONSE:\n' + step.content);
+        setPanel('08b', 'active');
+        log('0.8B responded: "' + step.content.substring(0,60) + '..."', 'log-chat');
+        setStep('generate', false);
+        setStep('parse', true);
+        await sleep(300);
+        setStep('parse', false);
+
+        document.getElementById('out-9b').innerHTML =
+          '<span style="opacity:.25; font-size:11px;">9B NOT NEEDED\ncategory=' + data.category + ' -> 0.8B handled</span>';
+      }
+      if (step.step === 'executor_system') {
+        // read/think/tool -> 9B handles it
+        setPV('pv-system', step.content);
+        setStep('prompt', true);
+        setPhase('9B system prompt', '#378ADD');
+        setPanel('9b', 'active');
+        setPanel('08b', 'idle');
+        log('9B system prompt built (' + step.content.length + ' chars)', 'log-exec');
+
+        const out08b = document.getElementById('out-08b');
+        out08b.innerHTML = '';
+        await typeText(out08b, 'CLASSIFY: ' + input + ' -> ' + data.category.toUpperCase() + '\n---\nrouted to 9B');
+        setPanel('08b', 'active');
+
+        await sleep(300);
+        setStep('prompt', false);
+      }
+      if (step.step === 'executor_config') {
+        setStep('generate', true);
+        setPhase('9B ready', '#378ADD');
+        setPanel('9b', 'working');
+
+        const cfg = step.config;
+        const out9b = document.getElementById('out-9b');
+        out9b.innerHTML = '';
+        const configText = [
+          'MODEL CONFIG:',
+          '  temperature: ' + cfg.temperature,
+          '  max_tokens: ' + cfg.max_tokens,
+          '  think_param: ' + cfg.think_param,
+          '  strip_think: ' + cfg.strip_think_tags,
+          '  use_think: ' + cfg.use_think,
+          '',
+          'category: ' + data.category.toUpperCase(),
+          'awaiting 9B response...',
+          '(trace mode = no actual 9B call)',
+        ].join('\n');
+        await typeText(out9b, configText);
+        setPanel('9b', 'active');
+        log('9B config: temp=' + cfg.temperature + ' think=' + cfg.use_think, 'log-exec');
+        setStep('generate', false);
+      }
+    }
+
+    // Done
+    setPhase('done', '#1D9E75');
+    log('trace finished', 'log-step');
+    setTimeout(() => setPhase('idle', '#555'), 3000);
+
+  } catch(e) {
+    document.getElementById('error-box').style.display = 'block';
+    document.getElementById('error-box').textContent = 'ERROR: ' + e.message;
+    log('ERROR: ' + e.message, 'log-warn');
+    setPhase('error', '#e24b4b');
+    clearAllSteps();
+    setPanel('08b', 'idle');
+    setPanel('9b', 'disabled');
+  }
+
+  busy = false;
+  btn.disabled = false;
+  btn.textContent = 'TRACE';
+}
+
+function getCatColor(cat) {
+  return {chat:'#1D9E75', read:'#378ADD', think:'#BA7517', tool:'#B54EA0'}[cat] || '#555';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
